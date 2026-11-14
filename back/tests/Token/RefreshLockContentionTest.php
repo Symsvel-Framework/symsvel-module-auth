@@ -61,7 +61,7 @@ final class RefreshLockContentionTest extends TestCase
                     }
                 }
             }
-            $now = new \\DateTimeImmutable('2026-11-14T10:00:00+00:00');
+            $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
             $pair = (new TokenFactory())->issue('bo', null, $now);
             $store = new DbalTokenStore($connection);
             $store->transaction(fn () => $store->savePair(new TokenSubject('bo', 1), $pair, $now));
@@ -75,7 +75,7 @@ final class RefreshLockContentionTest extends TestCase
                 fclose($sockets[0]);
                 try {
                     $signal = fgets($sockets[1]);
-                    if ($signal !== "go\\n") {
+                    if ($signal !== "go\n") {
                         exit(3);
                     }
                     $childConnection = DriverManager::getConnection($params);
@@ -87,8 +87,8 @@ final class RefreshLockContentionTest extends TestCase
                         ->rotate($pair->refresh->raw, 'bo', $now->modify('+2 seconds'));
                     $childConnection->close();
                     exit($result->decision === RefreshDecision::RevokeFamily ? 0 : 4);
-                } catch (\\Throwable $e) {
-                    fwrite(STDERR, 'Concurrent child: '.$e->getMessage()."\\n");
+                } catch (\Throwable $e) {
+                    fwrite(STDERR, 'Concurrent child: '.$e->getMessage()."\n");
                     exit(5);
                 }
             }
@@ -100,7 +100,7 @@ final class RefreshLockContentionTest extends TestCase
                 public function __construct(private $socket) {}
                 public function isActive(TokenSubject $subject): bool
                 {
-                    fwrite($this->socket, "go\\n");
+                    fwrite($this->socket, "go\n");
                     fflush($this->socket);
                     usleep(300000); // Child enters rotation while parent holds the row lock.
                     return true;
