@@ -217,3 +217,7 @@ Le workflow `.github/workflows/qa.yml` conserve le job SQLite et ajoute une matr
 ### Correction du contrôle de disponibilité CI
 
 Le script PHP inline du job de matrice utilise désormais le namespace DBAL avec des antislashs PHP simples (`\Doctrine\DBAL\DriverManager`) : le shell entre apostrophes ne nécessite pas de doubler les antislashs. Cette correction traite l'erreur de parsing rencontrée avant l'exécution des tests sur les trois moteurs.
+
+### Diagnostic de disponibilité de la matrice (14/11/2026)
+
+Après correction de la syntaxe PHP, les trois jobs de matrice échouaient au contrôle de disponibilité, mais le script masquait systématiquement l'exception DBAL. Le contrôle conserve désormais la dernière erreur de connexion et affiche son message en fin de délai, afin de distinguer un problème de pilote, d'URL, d'authentification ou de disponibilité du conteneur. Cette passe n'affirme pas avoir corrigé la cause sous-jacente ; elle la rend observable pour la prochaine CI.
