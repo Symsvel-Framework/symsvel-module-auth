@@ -15,6 +15,7 @@ use SymSvel\Module\Auth\Token\RefreshDecision;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenLogout;
+use SymSvel\Module\Auth\Token\TokenIssuer;
 use SymSvel\Module\Auth\Token\TokenRotation;
 use SymSvel\Module\Auth\Token\TokenSubject;
 
@@ -121,6 +122,32 @@ final class DbalTokenStoreMatrixTest extends TestCase
 
         self::assertSame(RefreshDecision::Reject, $rotation->rotate(str_repeat('B', 43), 'bo', $now)->decision);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
+    }
+
+    public function testIssueRotateLogoutFullLifecycle(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $factory = new TokenFactory();
+        $subject = new TokenSubject('app', 23);
+        $initial = (new TokenIssuer($this->store, $factory))->issue($subject, $now);
+        $verifier = new AccessTokenVerifier($this->store);
+
+        self::assertSame(23, $verifier->verify($initial->access->raw, 'app', $now)?->id);
+        self::assertNull($verifier->verify($initial->access->raw, 'bo', $now));
+
+        $rotated = (new TokenRotation($this->store, $factory, new RefreshTokenGuard()))
+            ->rotate($initial->refresh->raw, 'app', $now->modify('+1 second'));
+        self::assertSame(RefreshDecision::Rotate, $rotated->decision);
+        self::assertNotNull($rotated->pair);
+        self::assertSame($initial->familyId, $rotated->pair->familyId);
+        self::assertNull($verifier->verify($initial->access->raw, 'app', $now->modify('+2 seconds')));
+        self::assertSame(23, $verifier->verify($rotated->pair->access->raw, 'app', $now->modify('+2 seconds'))?->id);
+
+        self::assertTrue((new TokenLogout($this->store))->logout($rotated->pair->refresh->raw, 'app', $now->modify('+3 seconds')));
+        self::assertNull($verifier->verify($rotated->pair->access->raw, 'app', $now->modify('+4 seconds')));
+        self::assertSame(2, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'
+        ));
     }
 
     public function testLogoutRevokesAccessAndRefreshInDatabase(): void
