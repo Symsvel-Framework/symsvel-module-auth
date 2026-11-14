@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SymSvel\Module\Auth\Token;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 /**
  * Stockage DBAL. SQLite sérialise les écritures et la consommation est
@@ -18,7 +19,7 @@ final class DbalTokenStore implements TokenStore, AccessTokenLookup
 
     public function transaction(callable $operation): mixed
     {
-        if ($this->connection->getDatabasePlatform()->getName() === 'sqlite') {
+        if ($this->connection->getDatabasePlatform() instanceof SQLitePlatform) {
             if ($this->connection->getTransactionNestingLevel() !== 0) {
                 throw new \LogicException('SQLite token rotation requires an outermost transaction.');
             }
@@ -61,7 +62,7 @@ final class DbalTokenStore implements TokenStore, AccessTokenLookup
     public function lockRefresh(string $hash): ?RefreshTokenRecord
     {
         $sql = 'SELECT context, principal_id, family_id, expires_at, used_at, revoked_at FROM symsvel_auth_refresh_tokens WHERE token_hash = ?';
-        if ($this->connection->getDatabasePlatform()->getName() !== 'sqlite') {
+        if (!($this->connection->getDatabasePlatform() instanceof SQLitePlatform)) {
             $sql .= ' FOR UPDATE';
         }
         $row = $this->connection->fetchAssociative($sql, [$hash]);
