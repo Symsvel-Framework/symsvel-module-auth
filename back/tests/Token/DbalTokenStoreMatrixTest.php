@@ -351,4 +351,26 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertNull((new AccessTokenVerifier($this->store))->verify($pair->access->raw, 'bo', $now));
     }
 
+    public function testAccessExpiryBoundaryAndRefreshExpiryDoNotExtendAccess(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $factory = new TokenFactory();
+        $subject = new TokenSubject('bo', 44);
+        $pair = (new TokenIssuer($this->store, $factory))->issue($subject, $now);
+        $verifier = new AccessTokenVerifier($this->store);
+
+        self::assertSame(44, $verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt->modify('-1 microsecond'))?->id);
+        self::assertNull($verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt));
+        self::assertNull($verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt->modify('+1 microsecond')));
+
+        $rotation = new TokenRotation($this->store, $factory, new RefreshTokenGuard());
+        self::assertSame(
+            RefreshDecision::Reject,
+            $rotation->rotate($pair->refresh->raw, 'bo', $pair->refresh->expiresAt)->decision,
+        );
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE used_at IS NULL AND revoked_at IS NULL',
+        ));
+    }
+
 }
