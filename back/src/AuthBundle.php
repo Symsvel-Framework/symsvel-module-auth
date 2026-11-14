@@ -8,6 +8,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
+use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
@@ -38,6 +39,7 @@ final class AuthBundle extends AbstractBundle
             TokenLogout::class,
             TokenSessionRevoker::class,
             AccessTokenVerifier::class,
+            AuthenticatedTokenResolver::class,
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }
