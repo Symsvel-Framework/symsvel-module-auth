@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SymSvel\Module\Auth\Token;
 
+use Doctrine\DBAL\Exception\RetryableException;
+
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
 
 /**
@@ -26,6 +28,20 @@ final readonly class TokenRotation
             return new RefreshResult(RefreshDecision::Reject);
         }
 
+        for ($attempt = 0; ; ++$attempt) {
+            try {
+                return $this->rotateTransaction($rawRefresh, $context, $now);
+            } catch (RetryableException $exception) {
+                if ($attempt >= 2) {
+                    throw $exception;
+                }
+                usleep(100000 * ($attempt + 1));
+            }
+        }
+    }
+
+    private function rotateTransaction(string $rawRefresh, string $context, \DateTimeImmutable $now): RefreshResult
+    {
         return $this->store->transaction(function () use ($rawRefresh, $context, $now): RefreshResult {
             $hash = hash('sha256', $rawRefresh);
             $record = $this->store->lockRefresh($hash);
