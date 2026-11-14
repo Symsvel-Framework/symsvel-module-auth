@@ -98,6 +98,20 @@ final class RefreshLockContentionTest extends TestCase
             }
 
             self::assertNotNull($storeB->transaction(fn () => $storeB->lockRefresh($pair->refresh->hash)));
+
+            // Once the first contender commits consumption, the second
+            // connection must observe the used state and cannot consume again.
+            self::assertTrue($storeA->transaction(fn () => $storeA->consumeRefresh(
+                $pair->refresh->hash,
+                $now->modify('+1 second'),
+            )));
+            $observed = $storeB->transaction(fn () => $storeB->lockRefresh($pair->refresh->hash));
+            self::assertNotNull($observed);
+            self::assertNotNull($observed->state->usedAt);
+            self::assertFalse($storeB->transaction(fn () => $storeB->consumeRefresh(
+                $pair->refresh->hash,
+                $now->modify('+2 seconds'),
+            )));
         } finally {
             if ($second !== null) {
                 $second->close();
