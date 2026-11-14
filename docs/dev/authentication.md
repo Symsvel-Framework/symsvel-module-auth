@@ -225,3 +225,7 @@ Après correction de la syntaxe PHP, les trois jobs de matrice échouaient au co
 ### DSN DBAL 4 : sélection explicite du pilote
 
 La CI a révélé que `DriverManager::getConnection(['url' => ...])` ne sélectionne pas automatiquement de pilote dans notre version DBAL 4. Le script de disponibilité et les deux suites d'intégration utilisent maintenant `Doctrine\\DBAL\\Tools\\DsnParser` avec une correspondance explicite : `postgresql` → `pdo_pgsql`, `mysql` et `mariadb` → `pdo_mysql`. Les connexions SQLite locales continuent d'utiliser leurs paramètres DBAL natifs. La validation reste soumise à la prochaine CI multi-SGBD.
+
+### Sonde DBAL 4
+
+La méthode `Connection::connect()` étant protégée dans DBAL 4, le contrôle de disponibilité CI exécute désormais `SELECT 1` via `executeQuery()->fetchOne()`. Cette sonde utilise l'API publique et vérifie une connexion réellement exploitable.
