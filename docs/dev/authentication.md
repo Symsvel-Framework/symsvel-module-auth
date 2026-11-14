@@ -243,3 +243,9 @@ Le crash-test à deux processus a mis en évidence `SQLSTATE[40001] / 1213` (dea
 Le contrôleur `BoLoginController` expose `POST /apibo/auth/login` via la recipe de routes Auth. Il exige un corps JSON avec `email` et `password`, délègue au service `PasswordLogin` existant en contexte `bo`, renvoie 401 pour les identifiants refusés, 400 pour une requête invalide et 415 pour un contenu non JSON. Une connexion acceptée renvoie les tokens opaques access/refresh et leurs expirations, avec `Cache-Control: no-store`. Aucun mot de passe ni secret n'est journalisé par ce contrôleur.
 
 **Non terminé :** la politique CORS/origine, la limitation des tentatives, le transport navigateur des secrets, la vérification Bearer sur les routes protégées, le renouvellement, la déconnexion HTTP et les tests fonctionnels avec Admins doivent être validés avant de considérer la connexion BO utilisable en production. Ne pas stocker les tokens dans localStorage. Le dashboard reste verrouillé jusqu'à cette intégration.
+
+## Vérification de session BO
+
+`GET /apibo/auth/me` exige `Authorization: Bearer <access_token>`. Le contrôleur délègue à `AuthenticatedTokenResolver` : empreinte du token, expiration, contexte `bo` et statut actif de l'administrateur sont contrôlés avant de renvoyer `{ "id": 1, "context": "bo" }` (identifiant illustratif). Les requêtes sans Bearer valide renvoient 401, sans cache. Ce point d'entrée ne remplace **pas** l'intégration du firewall Symfony ni l'application des ACL aux autres endpoints.
+
+La CI doit encore valider ce changement. Ne pas ouvrir le dashboard ni conserver les tokens côté navigateur avant validation de la politique de transport, du renouvellement et de la déconnexion.
