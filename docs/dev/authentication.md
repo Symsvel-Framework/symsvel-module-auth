@@ -209,3 +209,7 @@ Le test de contention détecte désormais SQLite, PostgreSQL et les plateformes 
 ### Visibilité interconnexion après consommation
 
 Le test de contention vérifie aussi qu'après la libération du verrou, une consommation validée par la connexion A est visible depuis la connexion B (`usedAt` renseigné), et que B ne peut pas consommer une seconde fois le même refresh. Cela complète le contrôle de verrouillage ; il ne remplace pas une course de rotations simultanées entre processus.
+
+## CI multi-SGBD (14/11/2026)
+
+Le workflow `.github/workflows/qa.yml` conserve le job SQLite et ajoute une matrice de services éphémères PostgreSQL 17, MySQL 8.4 et MariaDB 11.4. Chaque job utilise sa propre base `symsvel_auth`, attend que DBAL puisse se connecter, puis lance les tests d'intégration DBAL et de contention avec `SYMSVEL_AUTH_TEST_DATABASE_URL`. Les identifiants de cette matrice sont réservés aux conteneurs CI jetables et ne doivent jamais être réutilisés sur un serveur accessible. La validation effective reste conditionnée aux résultats des nouveaux jobs et aux crash-tests locaux utilisateur.
