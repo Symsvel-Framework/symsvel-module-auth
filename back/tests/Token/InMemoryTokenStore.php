@@ -47,6 +47,11 @@ final class InMemoryTokenStore implements TokenStore
         $this->operations[] = 'revoke_family';
     }
 
+    public function revokeSubject(TokenSubject $subject, \DateTimeImmutable $at): void
+    {
+        $this->operations[] = 'revoke_subject';
+    }
+
     public function revokeFamilyAccess(string $context, string $familyId, \DateTimeImmutable $at): void
     {
         $this->operations[] = 'revoke_access';
