@@ -229,3 +229,7 @@ La CI a révélé que `DriverManager::getConnection(['url' => ...])` ne sélecti
 ### Sonde DBAL 4
 
 La méthode `Connection::connect()` étant protégée dans DBAL 4, le contrôle de disponibilité CI exécute désormais `SELECT 1` via `executeQuery()->fetchOne()`. Cette sonde utilise l'API publique et vérifie une connexion réellement exploitable.
+
+### Crash-test de rotations simultanées (14/11/2026)
+
+`RefreshLockContentionTest::testConcurrentRotationsHaveOneWinnerAndRevokeOnReplay` lance deux processus PHP (`pcntl_fork`) avec des connexions DBAL indépendantes. Le premier effectue une rotation et conserve le verrou pendant qu'il signale au second de tenter la même rotation. Après le commit du premier, le second doit détecter le rejeu et révoquer la famille, y compris les deux refresh tokens. Le test utilise un canal local de synchronisation et une base jetable, et saute uniquement lorsque l'extension `pcntl` n'est pas disponible. La validation reste conditionnée à la CI sur les quatre moteurs et aux crash-tests locaux.
