@@ -6,6 +6,7 @@ namespace SymSvel\Module\Auth\Tests\Token;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
@@ -31,7 +32,9 @@ final class RefreshLockContentionTest extends TestCase
             self::assertNotFalse($path);
         }
 
-        $params = $url ? ['url' => $url] : ['driver' => 'pdo_sqlite', 'path' => $path];
+        $params = $url
+            ? (new DsnParser(['postgresql' => 'pdo_pgsql', 'mysql' => 'pdo_mysql', 'mariadb' => 'pdo_mysql']))->parse($url)
+            : ['driver' => 'pdo_sqlite', 'path' => $path];
         $first = null;
         $second = null;
         $created = [];
