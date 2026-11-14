@@ -58,15 +58,17 @@ jobs:
         run: |
           php -r '
           require "vendor/autoload.php";
-          for ($i = 0; $i < 60; ++$i) {
+          $lastError = null;
+          for ($i = 0; $i < 20; ++$i) {
               try {
                   \Doctrine\DBAL\DriverManager::getConnection(["url" => getenv("DATABASE_URL")])->connect();
                   exit(0);
               } catch (\Throwable $e) {
+                  $lastError = $e;
                   sleep(1);
               }
           }
-          fwrite(STDERR, "Database did not become ready.\n");
+          fwrite(STDERR, "Database did not become ready: ".($lastError?->getMessage() ?? "unknown error")."\n");
           exit(1);
           '
       - name: DBAL integration and lock contention
