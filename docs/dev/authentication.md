@@ -249,3 +249,9 @@ Le contrôleur `BoLoginController` expose `POST /apibo/auth/login` via la recipe
 `GET /apibo/auth/me` exige `Authorization: Bearer <access_token>`. Le contrôleur délègue à `AuthenticatedTokenResolver` : empreinte du token, expiration, contexte `bo` et statut actif de l'administrateur sont contrôlés avant de renvoyer `{ "id": 1, "context": "bo" }` (identifiant illustratif). Les requêtes sans Bearer valide renvoient 401, sans cache. Ce point d'entrée ne remplace **pas** l'intégration du firewall Symfony ni l'application des ACL aux autres endpoints.
 
 La CI doit encore valider ce changement. Ne pas ouvrir le dashboard ni conserver les tokens côté navigateur avant validation de la politique de transport, du renouvellement et de la déconnexion.
+
+## Déconnexion BO avec liaison de famille (14/11)
+
+`POST /apibo/auth/logout` accepte un Bearer access et un JSON `{ "refresh_token": "…" }`. `BoSessionLogout` vérifie en base que les deux empreintes correspondent au **même contexte BO, même administrateur et même identifiant de famille**, avec des tokens actifs et non expirés, avant de révoquer la famille. Un refresh provenant d'une autre session ne suffit donc pas à déconnecter celle du Bearer. La réponse de succès est 204 sans cache ; un couple invalide renvoie 401.
+
+**Validation encore nécessaire :** tests DBAL multi-SGBD, concurrence et intégration HTTP. Le transport navigateur et la protection globale des routes BO restent à raccorder. Ne pas considérer cette route comme validée pour la production tant que les crash-tests ne sont pas terminés.
