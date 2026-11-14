@@ -183,3 +183,9 @@ Un test d'intégration supplémentaire dans `DbalTokenStoreMatrixTest` confirme,
 ## Composition des identités par contexte (14/11/2026)
 
 Le service `ContextIdentityProvider` route les deux contrats `PasswordPrincipal` et `PrincipalStatus` selon le contexte déclaré par `ContextOwnedIdentity::authContext()`. Il collecte les services portant le tag Symfony `symsvel.auth.identity_provider`, refuse les doublons et les contextes invalides, et rejette un contexte sans fournisseur. Le BO seul fonctionne avec Admins ; Users ajoute facultativement le contexte App. Auth ne dépend directement d'aucun module d'identité. Les alias de contrats pointent sur ce routeur. Tests unitaires de composition ajoutés ; CI et intégration complète à confirmer.
+
+## Préparation HTTP et garde de sécurité (14/11/2026)
+
+La composition du conteneur est désormais couverte par une assertion explicite : les contrats `PasswordPrincipal` et `PrincipalStatus` doivent tous deux pointer vers `ContextIdentityProvider`. Le test verrouille aussi l'autowiring du routeur. Cela complète les tests de routage BO seul et BO/App.
+
+**Point de blocage volontaire avant ouverture HTTP :** les invariants documentés plus haut exigent la validation des accès concurrents et des transactions sur les quatre SGBD, ainsi qu'une politique explicite de transport navigateur (cookies ou en-têtes), CSRF/CORS et limitation des tentatives. Les endpoints de connexion/refresh/logout et le firewall ne sont donc pas ouverts par cette passe. Leur implémentation devra suivre la validation de ces points, sans déplacer la logique de sécurité dans Back/Core.
