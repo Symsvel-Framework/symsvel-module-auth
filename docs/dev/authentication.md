@@ -205,3 +205,7 @@ Cette épreuve démontre une contention de verrou sur deux connexions, pas encor
 ### Compatibilité DBAL 4 : détection des plateformes
 
 Le test de contention détecte désormais SQLite, PostgreSQL et les plateformes MySQL/MariaDB via `instanceof` (`SQLitePlatform`, `PostgreSQLPlatform`, `AbstractMySQLPlatform`), et non via `getName()` qui n'existe pas dans DBAL 4. Correction suite à l'échec CI du 14/11/2026 (47 tests, 1 erreur).
+
+### Visibilité interconnexion après consommation
+
+Le test de contention vérifie aussi qu'après la libération du verrou, une consommation validée par la connexion A est visible depuis la connexion B (`usedAt` renseigné), et que B ne peut pas consommer une seconde fois le même refresh. Cela complète le contrôle de verrouillage ; il ne remplace pas une course de rotations simultanées entre processus.
