@@ -100,3 +100,11 @@ La déconnexion n'expose aucun endpoint. Le transport navigateur, les cookies et
 ## Tests indépendants et autoload (14/11)
 
 Le double `InMemoryTokenStore` possède son propre fichier PSR-4 `back/tests/Token/InMemoryTokenStore.php`, au lieu d'être déclaré à la fin de `TokenRotationTest.php`. Les tests `TokenLogoutTest` peuvent donc être exécutés seuls, sans dépendre de l'ordre de chargement des classes par PHPUnit. Un scénario supplémentaire vérifie qu'une déconnexion répétée sur un refresh déjà révoqué n'émet aucune nouvelle révocation.
+
+## Émission initiale et cycle de session (14/11)
+
+`TokenIssuer` centralise l'émission initiale d'une nouvelle famille de tokens. Il accepte un `TokenSubject` (contexte `bo` ou `app` et identifiant), utilise `TokenFactory`, puis persiste la paire dans la transaction `TokenStore`. Le secret brut n'est pas persisté. **Précondition impérative :** l'appelant doit avoir déjà authentifié le compte et vérifié qu'il est actif ; ce service n'effectue ni vérification de mot de passe ni recherche Admin/User.
+
+La matrice DBAL couvre désormais le cycle complet `émission → vérification access → rotation → déconnexion` pour App, ainsi que deux sessions BO indépendantes appartenant au même administrateur. La déconnexion d'une famille ne doit pas invalider les autres familles du compte. Les durées restent celles de `TokenPolicy` et l'intégration Symfony Security reste séparée.
+
+Les nouveaux commits nécessitent confirmation CI et crash-tests réels sur PostgreSQL, MySQL, MariaDB et SQLite avant clôture du chantier.
