@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace SymSvel\Module\Auth\Token;
 
 use Doctrine\DBAL\Connection;
-use Doctrine\DBAL\ParameterType;
 
 /**
  * Stockage DBAL. Sur SQLite, la sérialisation des écrivains repose sur BEGIN IMMEDIATE.
@@ -54,9 +53,9 @@ final class DbalTokenStore implements TokenStore
             new RefreshTokenState(
                 $row['context'],
                 $row['family_id'],
-                new \DateTimeImmutable($row['expires_at']),
-                $row['used_at'] === null ? null : new \DateTimeImmutable($row['used_at']),
-                $row['revoked_at'] === null ? null : new \DateTimeImmutable($row['revoked_at']),
+                new \DateTimeImmutable($row['expires_at'], new \DateTimeZone('UTC')),
+                $row['used_at'] === null ? null : new \DateTimeImmutable($row['used_at'], new \DateTimeZone('UTC')),
+                $row['revoked_at'] === null ? null : new \DateTimeImmutable($row['revoked_at'], new \DateTimeZone('UTC')),
             ),
         );
     }
