@@ -179,3 +179,7 @@ Un test d'intégration supplémentaire dans `DbalTokenStoreMatrixTest` confirme,
 ## État consolidé au 14/11/2026
 
 **Validé par les dernières CI rapportées :** tests unitaires et intégration SQLite des services de tokens, login, contrôle du compte actif et révocation des familles. L'adaptateur DBAL existe, les contrats `PasswordPrincipal` et `PrincipalStatus` sont obligatoires. **Non validé :** crash-tests locaux PostgreSQL/MySQL/MariaDB, concurrence réelle entre connexions, branchement des migrations Schema au compilateur, adaptateurs concrets Admins/Users, intégration Symfony Security et politique HTTP/cookies/CSRF/CORS. Les passages précédents de ce document décrivent l'historique de construction, pas toujours l'état actuel ; ce récapitulatif prévaut pour le suivi des chantiers.
+
+## Composition des identités par contexte (14/11/2026)
+
+Le service `ContextIdentityProvider` route les deux contrats `PasswordPrincipal` et `PrincipalStatus` selon le contexte déclaré par `ContextOwnedIdentity::authContext()`. Il collecte les services portant le tag Symfony `symsvel.auth.identity_provider`, refuse les doublons et les contextes invalides, et rejette un contexte sans fournisseur. Le BO seul fonctionne avec Admins ; Users ajoute facultativement le contexte App. Auth ne dépend directement d'aucun module d'identité. Les alias de contrats pointent sur ce routeur. Tests unitaires de composition ajoutés ; CI et intégration complète à confirmer.
