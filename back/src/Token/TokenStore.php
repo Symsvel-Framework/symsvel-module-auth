@@ -34,4 +34,7 @@ interface TokenStore
     public function revokeFamily(string $context, string $familyId, \DateTimeImmutable $at): void;
 
     public function revokeFamilyAccess(string $context, string $familyId, \DateTimeImmutable $at): void;
+
+    /** Invalide toutes les sessions d'un compte dans un contexte donné. */
+    public function revokeSubject(TokenSubject $subject, \DateTimeImmutable $at): void;
 }
