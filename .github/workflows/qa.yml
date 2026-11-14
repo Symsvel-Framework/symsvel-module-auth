@@ -60,7 +60,7 @@ jobs:
           require "vendor/autoload.php";
           for ($i = 0; $i < 60; ++$i) {
               try {
-                  \Doctrine\\DBAL\\DriverManager::getConnection(["url" => getenv("DATABASE_URL")])->connect();
+                  \Doctrine\DBAL\DriverManager::getConnection(["url" => getenv("DATABASE_URL")])->connect();
                   exit(0);
               } catch (\Throwable $e) {
                   sleep(1);
