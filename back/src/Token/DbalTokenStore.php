@@ -7,8 +7,8 @@ namespace SymSvel\Module\Auth\Token;
 use Doctrine\DBAL\Connection;
 
 /**
- * Stockage DBAL. Sur SQLite, la sérialisation des écrivains repose sur BEGIN IMMEDIATE.
- * Sur les autres moteurs, SELECT FOR UPDATE protège la ligne de refresh.
+ * Stockage DBAL. SQLite sérialise les écritures et la consommation est
+ * conditionnelle ; les autres moteurs utilisent SELECT FOR UPDATE.
  */
 final class DbalTokenStore implements TokenStore, AccessTokenLookup
 {
@@ -22,14 +22,17 @@ final class DbalTokenStore implements TokenStore, AccessTokenLookup
             if ($this->connection->getTransactionNestingLevel() !== 0) {
                 throw new \LogicException('SQLite token rotation requires an outermost transaction.');
             }
-            $this->connection->executeStatement('BEGIN IMMEDIATE');
+            // DBAL transaction state must stay synchronized with the driver.
+            $this->connection->beginTransaction();
             try {
                 $result = $operation();
-                $this->connection->executeStatement('COMMIT');
+                $this->connection->commit();
 
                 return $result;
             } catch (\Throwable $exception) {
-                $this->connection->executeStatement('ROLLBACK');
+                if ($this->connection->isTransactionActive()) {
+                    $this->connection->rollBack();
+                }
                 throw $exception;
             }
         }
