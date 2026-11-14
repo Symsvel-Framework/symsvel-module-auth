@@ -8,8 +8,8 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 
 /**
- * Stockage DBAL. SQLite sérialise les écritures et la consommation est
- * conditionnelle ; les autres moteurs utilisent SELECT FOR UPDATE.
+ * Stockage DBAL. SQLite acquiert un verrou d'écriture avant de lire le refresh ;
+ * les autres moteurs utilisent SELECT FOR UPDATE.
  */
 final class DbalTokenStore implements TokenStore, AccessTokenLookup
 {
@@ -62,7 +62,16 @@ final class DbalTokenStore implements TokenStore, AccessTokenLookup
     public function lockRefresh(string $hash): ?RefreshTokenRecord
     {
         $sql = 'SELECT context, principal_id, family_id, expires_at, used_at, revoked_at FROM symsvel_auth_refresh_tokens WHERE token_hash = ?';
-        if (!($this->connection->getDatabasePlatform() instanceof SQLitePlatform)) {
+        if ($this->connection->getDatabasePlatform() instanceof SQLitePlatform) {
+            // A deferred SQLite transaction must acquire its writer lock BEFORE
+            // reading the refresh. Otherwise two readers may both observe a
+            // fresh token and race when upgrading their read transactions.
+            // The no-op update changes no logical token state.
+            $this->connection->executeStatement(
+                'UPDATE symsvel_auth_refresh_tokens SET token_hash = token_hash WHERE token_hash = ?',
+                [$hash],
+            );
+        } else {
             $sql .= ' FOR UPDATE';
         }
         $row = $this->connection->fetchAssociative($sql, [$hash]);
