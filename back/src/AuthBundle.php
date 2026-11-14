@@ -6,6 +6,7 @@ namespace SymSvel\Module\Auth;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use SymSvel\Module\Auth\Controller\BoLoginController;
+use SymSvel\Module\Auth\Controller\BoSessionController;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -40,9 +41,11 @@ final class AuthBundle extends AbstractBundle
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
-        $builder->register(BoLoginController::class, BoLoginController::class)
-            ->setAutowired(true)
-            ->addTag('controller.service_arguments');
+        foreach ([BoLoginController::class, BoSessionController::class] as $controller) {
+            $builder->register($controller, $controller)
+                ->setAutowired(true)
+                ->addTag('controller.service_arguments');
+        }
 
         foreach ([
             TokenFactory::class,
