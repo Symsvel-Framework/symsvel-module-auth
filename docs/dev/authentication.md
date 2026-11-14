@@ -233,3 +233,7 @@ La méthode `Connection::connect()` étant protégée dans DBAL 4, le contrôle 
 ### Crash-test de rotations simultanées (14/11/2026)
 
 `RefreshLockContentionTest::testConcurrentRotationsHaveOneWinnerAndRevokeOnReplay` lance deux processus PHP (`pcntl_fork`) avec des connexions DBAL indépendantes. Le premier effectue une rotation et conserve le verrou pendant qu'il signale au second de tenter la même rotation. Après le commit du premier, le second doit détecter le rejeu et révoquer la famille, y compris les deux refresh tokens. Le test utilise un canal local de synchronisation et une base jetable, et saute uniquement lorsque l'extension `pcntl` n'est pas disponible. La validation reste conditionnée à la CI sur les quatre moteurs et aux crash-tests locaux.
+
+### Interblocage de rotation MariaDB (14/11/2026)
+
+Le crash-test à deux processus a mis en évidence `SQLSTATE[40001] / 1213` (deadlock) sur MariaDB 11.4. `TokenRotation` relance uniquement la **transaction complète** lorsqu'une exception DBAL implémente `RetryableException`, avec au maximum deux nouvelles tentatives et une attente bornée (100 puis 200 ms). Le rollback du stockage intervient avant chaque nouvelle tentative. Aucun résultat ni paire de tokens n'est retourné avant le commit ; une nouvelle lecture du refresh doit constater son éventuelle consommation et appliquer la révocation de famille. Les erreurs non réessayables ne sont pas interceptées. Ce comportement doit être validé par la matrice CI, notamment MariaDB, puis par crash-test local.
