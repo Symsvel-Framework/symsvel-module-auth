@@ -9,6 +9,9 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
+use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
+use SymSvel\Module\Auth\Identity\PasswordPrincipal;
+use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
@@ -31,6 +34,10 @@ final class AuthBundle extends AbstractBundle
 
         $builder->setAlias(TokenStore::class, DbalTokenStore::class);
         $builder->setAlias(AccessTokenLookup::class, DbalTokenStore::class);
+
+        $builder->register(ContextIdentityProvider::class, ContextIdentityProvider::class)->setAutowired(true);
+        $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
+        $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
         foreach ([
             TokenFactory::class,
