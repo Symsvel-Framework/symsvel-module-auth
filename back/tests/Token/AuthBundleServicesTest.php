@@ -9,6 +9,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use SymSvel\Module\Auth\AuthBundle;
+use SymSvel\Module\Auth\Identity\PasswordLogin;
+use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
@@ -36,6 +38,8 @@ final class AuthBundleServicesTest extends TestCase
         self::assertSame('doctrine.dbal.default_connection', (string) $connection);
 
         foreach ([
+            PasswordLogin::class,
+            AuthenticatedTokenResolver::class,
             TokenIssuer::class,
             TokenRotation::class,
             TokenLogout::class,
