@@ -237,3 +237,9 @@ La méthode `Connection::connect()` étant protégée dans DBAL 4, le contrôle 
 ### Interblocage de rotation MariaDB (14/11/2026)
 
 Le crash-test à deux processus a mis en évidence `SQLSTATE[40001] / 1213` (deadlock) sur MariaDB 11.4. `TokenRotation` relance uniquement la **transaction complète** lorsqu'une exception DBAL implémente `RetryableException`, avec au maximum deux nouvelles tentatives et une attente bornée (100 puis 200 ms). Le rollback du stockage intervient avant chaque nouvelle tentative. Aucun résultat ni paire de tokens n'est retourné avant le commit ; une nouvelle lecture du refresh doit constater son éventuelle consommation et appliquer la révocation de famille. Les erreurs non réessayables ne sont pas interceptées. Ce comportement doit être validé par la matrice CI, notamment MariaDB, puis par crash-test local.
+
+## Endpoint de connexion BO (14/11/2026)
+
+Le contrôleur `BoLoginController` expose `POST /apibo/auth/login` via la recipe de routes Auth. Il exige un corps JSON avec `email` et `password`, délègue au service `PasswordLogin` existant en contexte `bo`, renvoie 401 pour les identifiants refusés, 400 pour une requête invalide et 415 pour un contenu non JSON. Une connexion acceptée renvoie les tokens opaques access/refresh et leurs expirations, avec `Cache-Control: no-store`. Aucun mot de passe ni secret n'est journalisé par ce contrôleur.
+
+**Non terminé :** la politique CORS/origine, la limitation des tentatives, le transport navigateur des secrets, la vérification Bearer sur les routes protégées, le renouvellement, la déconnexion HTTP et les tests fonctionnels avec Admins doivent être validés avant de considérer la connexion BO utilisable en production. Ne pas stocker les tokens dans localStorage. Le dashboard reste verrouillé jusqu'à cette intégration.
