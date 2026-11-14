@@ -30,6 +30,19 @@ final class TokenLogoutTest extends TestCase
         self::assertSame(['lock', 'revoke_family'], $store->operations);
     }
 
+    public function testAlreadyRevokedRefreshDoesNotRevokeAgain(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $store = new InMemoryTokenStore();
+        $store->record = new RefreshTokenRecord(
+            new TokenSubject('bo', 7),
+            new RefreshTokenState('bo', str_repeat('a', 32), $now->modify('+1 hour'), null, $now),
+        );
+
+        self::assertFalse((new TokenLogout($store))->logout(str_repeat('A', 43), 'bo', $now));
+        self::assertSame(['lock'], $store->operations);
+    }
+
     public function testMalformedSecretDoesNotAccessStorage(): void
     {
         $store = new InMemoryTokenStore();
