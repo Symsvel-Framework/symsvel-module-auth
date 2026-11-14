@@ -125,6 +125,38 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
     }
 
+    public function testIssueRollsBackWhenRefreshInsertFails(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $subject = new TokenSubject('bo', 31);
+        $factory = new TokenFactory();
+        $pair = $factory->issue('bo', null, $now);
+        $this->connection->insert('symsvel_auth_refresh_tokens', [
+            'context' => 'bo',
+            'principal_id' => 31,
+            'family_id' => $pair->familyId,
+            'token_hash' => $pair->refresh->hash,
+            'expires_at' => '2026-12-14 10:00:00.000000',
+            'created_at' => '2026-11-14 10:00:00.000000',
+        ]);
+
+        try {
+            $this->store->transaction(fn () => $this->store->savePair($subject, $pair, $now));
+            self::fail('Expected duplicate refresh hash to reject transaction.');
+        } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+            // Access insertion must have rolled back alongside the refresh failure.
+        }
+
+        self::assertSame(0, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE token_hash = ?',
+            [$pair->access->hash],
+        ));
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE token_hash = ?',
+            [$pair->refresh->hash],
+        ));
+    }
+
     public function testRevokeAllSessionsIsScopedByPrincipalAndContext(): void
     {
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
