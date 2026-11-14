@@ -39,6 +39,9 @@ final class AuthBundle extends AbstractBundle
         $builder->setAlias(TokenStore::class, DbalTokenStore::class);
         $builder->setAlias(AccessTokenLookup::class, DbalTokenStore::class);
 
+        $builder->register(BoSessionLogout::class, BoSessionLogout::class)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+
         $builder->register(ContextIdentityProvider::class, ContextIdentityProvider::class)->setAutowired(true);
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
@@ -50,7 +53,6 @@ final class AuthBundle extends AbstractBundle
         }
 
         foreach ([
-            BoSessionLogout::class,
             TokenFactory::class,
             RefreshTokenGuard::class,
             TokenIssuer::class,
