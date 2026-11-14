@@ -8,5 +8,68 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          extensions: pdo_sqlite
       - run: composer install --no-interaction --prefer-dist
       - run: composer qa
+
+  database-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - engine: postgres
+            image: postgres:17
+            url: postgresql://symsvel_auth:symsvel_auth@127.0.0.1:5432/symsvel_auth
+          - engine: mysql
+            image: mysql:8.4
+            url: mysql://symsvel_auth:symsvel_auth@127.0.0.1:3306/symsvel_auth
+          - engine: mariadb
+            image: mariadb:11.4
+            url: mysql://symsvel_auth:symsvel_auth@127.0.0.1:3306/symsvel_auth
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          POSTGRES_USER: symsvel_auth
+          POSTGRES_PASSWORD: symsvel_auth
+          POSTGRES_DB: symsvel_auth
+          MYSQL_USER: symsvel_auth
+          MYSQL_PASSWORD: symsvel_auth
+          MYSQL_DATABASE: symsvel_auth
+          MYSQL_ROOT_PASSWORD: symsvel_auth_root
+          MARIADB_USER: symsvel_auth
+          MARIADB_PASSWORD: symsvel_auth
+          MARIADB_DATABASE: symsvel_auth
+          MARIADB_ROOT_PASSWORD: symsvel_auth_root
+        ports:
+          - 5432:5432
+          - 3306:3306
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pdo_mysql, pdo_sqlite
+      - run: composer install --no-interaction --prefer-dist
+      - name: Wait for database
+        env:
+          DATABASE_URL: ${{ matrix.url }}
+        run: |
+          php -r '
+          require "vendor/autoload.php";
+          for ($i = 0; $i < 60; ++$i) {
+              try {
+                  \\Doctrine\\DBAL\\DriverManager::getConnection(["url" => getenv("DATABASE_URL")])->connect();
+                  exit(0);
+              } catch (\\Throwable $e) {
+                  sleep(1);
+              }
+          }
+          fwrite(STDERR, "Database did not become ready.\\n");
+          exit(1);
+          '
+      - name: DBAL integration and lock contention
+        env:
+          SYMSVEL_AUTH_TEST_DATABASE_URL: ${{ matrix.url }}
+        run: vendor/bin/phpunit -c back/phpunit.xml.dist back/tests/Token/DbalTokenStoreMatrixTest.php back/tests/Token/RefreshLockContentionTest.php
