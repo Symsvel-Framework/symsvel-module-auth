@@ -2,7 +2,10 @@
     "schema": 1,
     "name": "Auth",
     "dependencies": {},
-    "tables": [],
+    "tables": [
+        "symsvel_auth_access_tokens",
+        "symsvel_auth_refresh_tokens"
+    ],
     "components": {
         "back": "back"
     },
