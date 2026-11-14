@@ -4,9 +4,7 @@
     "dependencies": {},
     "tables": [],
     "components": {
-        "back": "back",
-        "bo": "bo",
-        "app": "app"
+        "back": "back"
     },
     "documentation": {
         "dev": "docs/dev",
