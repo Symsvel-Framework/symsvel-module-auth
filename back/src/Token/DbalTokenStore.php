@@ -10,7 +10,7 @@ use Doctrine\DBAL\Connection;
  * Stockage DBAL. Sur SQLite, la sérialisation des écrivains repose sur BEGIN IMMEDIATE.
  * Sur les autres moteurs, SELECT FOR UPDATE protège la ligne de refresh.
  */
-final class DbalTokenStore implements TokenStore
+final class DbalTokenStore implements TokenStore, AccessTokenLookup
 {
     public function __construct(private readonly Connection $connection)
     {
@@ -35,6 +35,24 @@ final class DbalTokenStore implements TokenStore
         }
 
         return $this->connection->transactional($operation);
+    }
+
+
+    public function findAccessByHash(string $hash): ?AccessTokenRecord
+    {
+        $row = $this->connection->fetchAssociative(
+            'SELECT context, principal_id, expires_at, revoked_at FROM symsvel_auth_access_tokens WHERE token_hash = ?',
+            [$hash],
+        );
+        if ($row === false) {
+            return null;
+        }
+
+        return new AccessTokenRecord(
+            new TokenSubject($row['context'], (int) $row['principal_id']),
+            new \DateTimeImmutable($row['expires_at'], new \DateTimeZone('UTC')),
+            $row['revoked_at'] === null ? null : new \DateTimeImmutable($row['revoked_at'], new \DateTimeZone('UTC')),
+        );
     }
 
     public function lockRefresh(string $hash): ?RefreshTokenRecord
