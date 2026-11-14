@@ -8,6 +8,9 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use PHPUnit\Framework\TestCase;
 use SymSvel\Module\Auth\Schema\AuthTokenSchema;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
@@ -36,7 +39,7 @@ final class RefreshLockContentionTest extends TestCase
         try {
             $first = DriverManager::getConnection($params);
             $second = DriverManager::getConnection($params);
-            $platform = $first->getDatabasePlatform()->getName();
+            $platform = $first->getDatabasePlatform();
             $manager = $first->createSchemaManager();
             $tables = ['symsvel_auth_access_tokens', 'symsvel_auth_refresh_tokens'];
             foreach ($tables as $table) {
@@ -61,14 +64,14 @@ final class RefreshLockContentionTest extends TestCase
             $storeA->transaction(fn () => $storeA->savePair(new TokenSubject('bo', 1), $pair, $now));
 
             // Bound waiting so a broken lock never hangs a CI runner.
-            if ($platform === 'sqlite') {
+            if ($platform instanceof SQLitePlatform) {
                 $second->executeStatement('PRAGMA busy_timeout = 0');
-            } elseif ($platform === 'postgresql') {
+            } elseif ($platform instanceof PostgreSQLPlatform) {
                 $second->executeStatement("SET lock_timeout = '200ms'");
-            } elseif (in_array($platform, ['mysql', 'mariadb'], true)) {
+            } elseif ($platform instanceof AbstractMySQLPlatform) {
                 $second->executeStatement('SET SESSION innodb_lock_wait_timeout = 1');
             } else {
-                self::markTestSkipped('Lock timeout not configured for '.$platform);
+                self::markTestSkipped('Lock timeout not configured for '.get_debug_type($platform));
             }
 
             $first->beginTransaction();
