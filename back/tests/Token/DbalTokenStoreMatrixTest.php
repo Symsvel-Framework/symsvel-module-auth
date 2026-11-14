@@ -16,6 +16,7 @@ use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenLogout;
 use SymSvel\Module\Auth\Token\TokenIssuer;
+use SymSvel\Module\Auth\Token\TokenSessionRevoker;
 use SymSvel\Module\Auth\Token\TokenRotation;
 use SymSvel\Module\Auth\Token\TokenSubject;
 
@@ -122,6 +123,28 @@ final class DbalTokenStoreMatrixTest extends TestCase
 
         self::assertSame(RefreshDecision::Reject, $rotation->rotate(str_repeat('B', 43), 'bo', $now)->decision);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
+    }
+
+    public function testRevokeAllSessionsIsScopedByPrincipalAndContext(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $issuer = new TokenIssuer($this->store, new TokenFactory());
+        $boA1 = $issuer->issue(new TokenSubject('bo', 17), $now);
+        $boA2 = $issuer->issue(new TokenSubject('bo', 17), $now);
+        $boOther = $issuer->issue(new TokenSubject('bo', 18), $now);
+        $appSameId = $issuer->issue(new TokenSubject('app', 17), $now);
+
+        (new TokenSessionRevoker($this->store))->revokeAll(new TokenSubject('bo', 17), $now);
+        $verifier = new AccessTokenVerifier($this->store);
+        self::assertNull($verifier->verify($boA1->access->raw, 'bo', $now));
+        self::assertNull($verifier->verify($boA2->access->raw, 'bo', $now));
+        self::assertSame(18, $verifier->verify($boOther->access->raw, 'bo', $now)?->id);
+        self::assertSame(17, $verifier->verify($appSameId->access->raw, 'app', $now)?->id);
+
+        $rotation = new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard());
+        self::assertSame(RefreshDecision::Reject, $rotation->rotate($boA1->refresh->raw, 'bo', $now)->decision);
+        self::assertSame(RefreshDecision::Reject, $rotation->rotate($boA2->refresh->raw, 'bo', $now)->decision);
+        self::assertSame(RefreshDecision::Rotate, $rotation->rotate($appSameId->refresh->raw, 'app', $now)->decision);
     }
 
     public function testIndependentSessionsOfSamePrincipalRemainValidAfterLogout(): void
