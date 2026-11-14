@@ -159,3 +159,7 @@ Tests : refus d'un contexte inconnu, d'un échec d'authentification et d'un suje
 ## Test de bout en bout des services sur DBAL (14/11)
 
 La matrice `DbalTokenStoreMatrixTest` ajoute un scénario de connexion par mot de passe avec fournisseur d'identité de test, persistance réelle des tokens, vérification de l'access, refus du contexte App, désactivation immédiate du compte, refus d'une nouvelle connexion et révocation de toutes les sessions. Le fournisseur de test n'est **pas** un adaptateur Admins de production ; il simule les contrats `PasswordPrincipal` et `PrincipalStatus` afin de valider l'orchestration sans introduire de dépendance entre modules. Le scénario s'exécute sur SQLite et sur chaque SGBDR explicitement configuré pour la matrice. La CI et les crash-tests doivent encore confirmer cette passe.
+
+## Frontières temporelles des tokens (14/11)
+
+La matrice DBAL vérifie désormais les instants exacts d'expiration : un access est valable juste avant son échéance (précision microseconde), mais rejeté à l'échéance et après ; un refresh présenté à son échéance est rejeté sans consommation ni révocation automatique. Cette couverture protège le comportement `expiresAt <= now` des vérificateurs lors des changements de moteur SQL et de précision temporelle. La CI de cette passe et les crash-tests multi-SGBD restent à confirmer.
