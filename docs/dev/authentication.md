@@ -108,3 +108,11 @@ Le double `InMemoryTokenStore` possède son propre fichier PSR-4 `back/tests/Tok
 La matrice DBAL couvre désormais le cycle complet `émission → vérification access → rotation → déconnexion` pour App, ainsi que deux sessions BO indépendantes appartenant au même administrateur. La déconnexion d'une famille ne doit pas invalider les autres familles du compte. Les durées restent celles de `TokenPolicy` et l'intégration Symfony Security reste séparée.
 
 Les nouveaux commits nécessitent confirmation CI et crash-tests réels sur PostgreSQL, MySQL, MariaDB et SQLite avant clôture du chantier.
+
+## Révocation de toutes les sessions d'un compte
+
+`TokenSessionRevoker::revokeAll(TokenSubject, DateTimeImmutable)` révoque, dans une transaction, **tous les access et refresh tokens** du compte ciblé. La sélection utilise impérativement le couple `(context, principal_id)` : un Admin BO et un User App portant le même identifiant numérique sont des comptes distincts. Les autres comptes du même contexte ne sont pas affectés.
+
+Cas d'utilisation prévus : désactivation d'un compte, changement/réinitialisation du mot de passe, suspicion de compromission. **Le service ne décide pas qui est autorisé à l'appeler** ; la couche d'authentification et les modules propriétaires du compte doivent imposer les contrôles d'accès et déclencher la révocation. Aucun endpoint public n'est ajouté.
+
+Tests : double mémoire (transaction) et matrice DBAL avec deux sessions BO du même compte, un autre administrateur et un utilisateur App partageant le même ID. Après révocation, les access et refresh du compte ciblé sont inutilisables, tandis que les autres sessions restent valides.
