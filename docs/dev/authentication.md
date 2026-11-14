@@ -201,3 +201,7 @@ La composition du conteneur est désormais couverte par une assertion explicite 
 Par défaut, ce test utilise un fichier SQLite temporaire. Pour chaque moteur externe, définir `SYMSVEL_AUTH_TEST_DATABASE_URL` vers **une base vide exclusivement réservée aux tests**, puis lancer `composer qa`. Les deux tables Auth sont créées et supprimées par le test. **Ne jamais utiliser une base projet ou de production.**
 
 Cette épreuve démontre une contention de verrou sur deux connexions, pas encore une course interprocessus complète aboutissant à une rotation concurrente ; cette dernière et les crash-tests locaux sur les quatre SGBD restent à valider avant toute exposition HTTP.
+
+### Compatibilité DBAL 4 : détection des plateformes
+
+Le test de contention détecte désormais SQLite, PostgreSQL et les plateformes MySQL/MariaDB via `instanceof` (`SQLitePlatform`, `PostgreSQLPlatform`, `AbstractMySQLPlatform`), et non via `getName()` qui n'existe pas dans DBAL 4. Correction suite à l'échec CI du 14/11/2026 (47 tests, 1 erreur).
