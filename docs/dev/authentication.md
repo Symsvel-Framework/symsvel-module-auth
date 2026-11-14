@@ -37,3 +37,11 @@ Tests unitaires ajoutés pour la génération et les invariants de base. Pas de 
 Le contrat impose : verrouiller le refresh, vérifier le contexte, effectuer une transition conditionnelle `fresh -> used`, révoquer les anciens access tokens de la famille, persister la nouvelle paire et valider le tout dans une transaction. Un échec de consommation entraîne la révocation de la famille.
 
 **Limite actuelle :** `TokenStore` est une interface ; aucun adaptateur Doctrine/DBAL n'est encore branché. Les tests utilisent un faux stockage, sans garantie réelle d'atomicité ou de rollback. La garantie inter-processus dépendra de l'adaptateur, des contraintes uniques et de tests de concurrence multi-SGBD. Ne pas exposer ce service via un endpoint avant cette validation. L'état actif du compte devra être revérifié lors du renouvellement par l'intégration à l'identité, avant émission des tokens.
+
+## Adaptateur DBAL et tables (passe du 14/11)
+
+L'adaptateur `DbalTokenStore` implémente le contrat de stockage sur Doctrine DBAL 4. Deux tables dédiées, `symsvel_auth_access_tokens` et `symsvel_auth_refresh_tokens`, sont décrites par `AuthTokenSchema::apply(Schema)` avec index d'empreinte unique, index famille/contexte et index d'expiration. Le manifeste annonce les deux tables.
+
+La rotation utilise `SELECT ... FOR UPDATE` sur PostgreSQL/MySQL/MariaDB ; SQLite utilise `BEGIN IMMEDIATE` sur une transaction externe, pour sérialiser les écrivains. Le test d'intégration SQLite vérifie une rotation suivie d'un rejeu et de la révocation de famille.
+
+**À vérifier impérativement :** le point d'entrée exact du compilateur Schema SymSvel, la compatibilité DBAL 4 des migrations, la gestion des transactions imbriquées, le comportement réel des verrous et les tests concurrents sur quatre SGBD. La définition Schema n'est pas encore branchée sur le mécanisme de compilation des migrations. Aucun endpoint n'est activé. Le contrôle d'état du principal et la gestion d'éventuelles politiques 2FA restent à intégrer avant exposition.
