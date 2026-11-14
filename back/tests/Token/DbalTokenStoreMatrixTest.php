@@ -122,6 +122,23 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
     }
 
+    public function testExpiredTokensAreRejectedWithoutFamilyRevocation(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $factory = new TokenFactory();
+        $pair = $factory->issue('bo', null, $now);
+        $this->store->transaction(fn () => $this->store->savePair(new TokenSubject('bo', 10), $pair, $now));
+        $verifier = new AccessTokenVerifier($this->store);
+
+        self::assertNull($verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt));
+        $result = (new TokenRotation($this->store, $factory, new RefreshTokenGuard()))
+            ->rotate($pair->refresh->raw, 'bo', $pair->refresh->expiresAt);
+        self::assertSame(RefreshDecision::Reject, $result->decision);
+        self::assertSame(0, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'
+        ));
+    }
+
     public function testAccessValidationBeforeAndAfterRotation(): void
     {
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
