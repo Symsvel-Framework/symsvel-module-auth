@@ -104,6 +104,17 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $this->store->transaction(fn () => $this->store->revokeFamily('bo', $first->familyId, $now));
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE revoked_at IS NULL') + (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NULL'));
     }
+    public function testUnknownRefreshIsRejectedWithoutChangingStoredTokens(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $pair = (new TokenFactory())->issue('bo', null, $now);
+        $this->store->transaction(fn () => $this->store->savePair(new TokenSubject('bo', 10), $pair, $now));
+        $rotation = new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard());
+
+        self::assertSame(RefreshDecision::Reject, $rotation->rotate(str_repeat('B', 43), 'bo', $now)->decision);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
+    }
+
     public function testAccessValidationBeforeAndAfterRotation(): void
     {
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
