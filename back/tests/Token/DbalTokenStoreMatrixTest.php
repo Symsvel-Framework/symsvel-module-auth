@@ -124,6 +124,21 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
     }
 
+    public function testIndependentSessionsOfSamePrincipalRemainValidAfterLogout(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $issuer = new TokenIssuer($this->store, new TokenFactory());
+        $subject = new TokenSubject('bo', 17);
+        $first = $issuer->issue($subject, $now);
+        $second = $issuer->issue($subject, $now);
+        $verifier = new AccessTokenVerifier($this->store);
+
+        self::assertNotSame($first->familyId, $second->familyId);
+        self::assertTrue((new TokenLogout($this->store))->logout($first->refresh->raw, 'bo', $now));
+        self::assertNull($verifier->verify($first->access->raw, 'bo', $now));
+        self::assertSame(17, $verifier->verify($second->access->raw, 'bo', $now)?->id);
+    }
+
     public function testIssueRotateLogoutFullLifecycle(): void
     {
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
