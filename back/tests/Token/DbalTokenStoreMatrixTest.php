@@ -53,7 +53,9 @@ final class DbalTokenStoreMatrixTest extends TestCase
             return;
         }
         foreach (['symsvel_auth_access_tokens', 'symsvel_auth_refresh_tokens'] as $table) {
-            $this->connection->executeStatement('DROP TABLE IF EXISTS '.$table);
+            if ($this->connection->createSchemaManager()->tablesExist([$table])) {
+                $this->connection->executeStatement('DROP TABLE '.$table);
+            }
         }
         $this->connection->close();
     }
