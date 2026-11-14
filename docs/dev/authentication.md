@@ -213,3 +213,7 @@ Le test de contention vérifie aussi qu'après la libération du verrou, une con
 ## CI multi-SGBD (14/11/2026)
 
 Le workflow `.github/workflows/qa.yml` conserve le job SQLite et ajoute une matrice de services éphémères PostgreSQL 17, MySQL 8.4 et MariaDB 11.4. Chaque job utilise sa propre base `symsvel_auth`, attend que DBAL puisse se connecter, puis lance les tests d'intégration DBAL et de contention avec `SYMSVEL_AUTH_TEST_DATABASE_URL`. Les identifiants de cette matrice sont réservés aux conteneurs CI jetables et ne doivent jamais être réutilisés sur un serveur accessible. La validation effective reste conditionnée aux résultats des nouveaux jobs et aux crash-tests locaux utilisateur.
+
+### Correction du contrôle de disponibilité CI
+
+Le script PHP inline du job de matrice utilise désormais le namespace DBAL avec des antislashs PHP simples (`\Doctrine\DBAL\DriverManager`) : le shell entre apostrophes ne nécessite pas de doubler les antislashs. Cette correction traite l'erreur de parsing rencontrée avant l'exécution des tests sur les trois moteurs.
