@@ -76,7 +76,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
         $pair = $factory->issue('bo', null, $now);
         $this->store->transaction(fn () => $this->store->savePair(new TokenSubject('bo', 10), $pair, $now));
-        $rotation = new TokenRotation($this->store, $factory, new RefreshTokenGuard());
+        $rotation = new TokenRotation($this->store, $factory, new RefreshTokenGuard(), new ActivePrincipal());
 
         self::assertSame(RefreshDecision::Reject, $rotation->rotate($pair->refresh->raw, 'app', $now)->decision);
         self::assertSame(RefreshDecision::Rotate, $rotation->rotate($pair->refresh->raw, 'bo', $now->modify('+1 second'))->decision);
@@ -119,7 +119,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
         $pair = (new TokenFactory())->issue('bo', null, $now);
         $this->store->transaction(fn () => $this->store->savePair(new TokenSubject('bo', 10), $pair, $now));
-        $rotation = new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard());
+        $rotation = new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard(), new ActivePrincipal());
 
         self::assertSame(RefreshDecision::Reject, $rotation->rotate(str_repeat('B', 43), 'bo', $now)->decision);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
@@ -196,7 +196,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertSame(18, $verifier->verify($boOther->access->raw, 'bo', $now)?->id);
         self::assertSame(17, $verifier->verify($appSameId->access->raw, 'app', $now)?->id);
 
-        $rotation = new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard());
+        $rotation = new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard(), new ActivePrincipal());
         self::assertSame(RefreshDecision::Reject, $rotation->rotate($boA1->refresh->raw, 'bo', $now)->decision);
         self::assertSame(RefreshDecision::Reject, $rotation->rotate($boA2->refresh->raw, 'bo', $now)->decision);
         self::assertSame(RefreshDecision::Rotate, $rotation->rotate($appSameId->refresh->raw, 'app', $now)->decision);
@@ -228,7 +228,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertSame(23, $verifier->verify($initial->access->raw, 'app', $now)?->id);
         self::assertNull($verifier->verify($initial->access->raw, 'bo', $now));
 
-        $rotated = (new TokenRotation($this->store, $factory, new RefreshTokenGuard()))
+        $rotated = (new TokenRotation($this->store, $factory, new RefreshTokenGuard(), new ActivePrincipal()))
             ->rotate($initial->refresh->raw, 'app', $now->modify('+1 second'));
         self::assertSame(RefreshDecision::Rotate, $rotated->decision);
         self::assertNotNull($rotated->pair);
@@ -268,7 +268,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $verifier = new AccessTokenVerifier($this->store);
 
         self::assertNull($verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt));
-        $result = (new TokenRotation($this->store, $factory, new RefreshTokenGuard()))
+        $result = (new TokenRotation($this->store, $factory, new RefreshTokenGuard(), new ActivePrincipal()))
             ->rotate($pair->refresh->raw, 'bo', $pair->refresh->expiresAt);
         self::assertSame(RefreshDecision::Reject, $result->decision);
         self::assertSame(0, (int) $this->connection->fetchOne(
@@ -287,7 +287,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertSame(10, $verifier->verify($pair->access->raw, 'bo', $now)?->id);
         self::assertNull($verifier->verify($pair->access->raw, 'app', $now));
 
-        $result = (new TokenRotation($this->store, $factory, new RefreshTokenGuard()))
+        $result = (new TokenRotation($this->store, $factory, new RefreshTokenGuard(), new ActivePrincipal()))
             ->rotate($pair->refresh->raw, 'bo', $now->modify('+1 second'));
         self::assertSame(RefreshDecision::Rotate, $result->decision);
         self::assertNull($verifier->verify($pair->access->raw, 'bo', $now->modify('+2 seconds')));
@@ -363,7 +363,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         self::assertNull($verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt));
         self::assertNull($verifier->verify($pair->access->raw, 'bo', $pair->access->expiresAt->modify('+1 microsecond')));
 
-        $rotation = new TokenRotation($this->store, $factory, new RefreshTokenGuard());
+        $rotation = new TokenRotation($this->store, $factory, new RefreshTokenGuard(), new ActivePrincipal());
         self::assertSame(
             RefreshDecision::Reject,
             $rotation->rotate($pair->refresh->raw, 'bo', $pair->refresh->expiresAt)->decision,
