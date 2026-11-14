@@ -116,3 +116,12 @@ Les nouveaux commits nécessitent confirmation CI et crash-tests réels sur Post
 Cas d'utilisation prévus : désactivation d'un compte, changement/réinitialisation du mot de passe, suspicion de compromission. **Le service ne décide pas qui est autorisé à l'appeler** ; la couche d'authentification et les modules propriétaires du compte doivent imposer les contrôles d'accès et déclencher la révocation. Aucun endpoint public n'est ajouté.
 
 Tests : double mémoire (transaction) et matrice DBAL avec deux sessions BO du même compte, un autre administrateur et un utilisateur App partageant le même ID. Après révocation, les access et refresh du compte ciblé sont inutilisables, tandis que les autres sessions restent valides.
+
+## Intégrité transactionnelle : tests d'échec (14/11)
+
+La matrice DBAL couvre deux scénarios supplémentaires sur chaque moteur configuré :
+
+1. **Échec du second INSERT** : une collision volontaire sur l'empreinte unique du refresh provoque une exception de contrainte. L'access inséré juste avant dans la même transaction doit être annulé, sans toucher au refresh préexistant.
+2. **Échec après révocation** : une exception forcée après `revokeSubject` doit restaurer la validité des access et refresh tokens de la session. La révocation de compte est atomique, jamais partielle.
+
+Ces scénarios vérifient les garanties de rollback réelles du stockage DBAL. Ils ne prouvent pas encore la sérialisation de deux rotations concurrentes ; un crash-test à deux connexions reste nécessaire avant validation finale. Les CI des nouveaux commits doivent être confirmées.
