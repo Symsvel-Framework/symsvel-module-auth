@@ -25,7 +25,8 @@ final class DbalTokenStoreMatrixTest extends TestCase
 {
     private Connection $connection;
     private DbalTokenStore $store;
-    private bool $ownsTables = false;
+    /** @var list<string> */
+    private array $createdTables = [];
 
     protected function setUp(): void
     {
@@ -44,8 +45,12 @@ final class DbalTokenStoreMatrixTest extends TestCase
         }
         foreach ($schema->toSql($this->connection->getDatabasePlatform()) as $sql) {
             $this->connection->executeStatement($sql);
+            foreach (['symsvel_auth_access_tokens', 'symsvel_auth_refresh_tokens'] as $table) {
+                if (!in_array($table, $this->createdTables, true) && $manager->tablesExist([$table])) {
+                    $this->createdTables[] = $table;
+                }
+            }
         }
-        $this->ownsTables = true;
         $this->store = new DbalTokenStore($this->connection);
     }
 
@@ -54,11 +59,9 @@ final class DbalTokenStoreMatrixTest extends TestCase
         if (!isset($this->connection)) {
             return;
         }
-        if ($this->ownsTables) {
-            foreach (['symsvel_auth_access_tokens', 'symsvel_auth_refresh_tokens'] as $table) {
-                if ($this->connection->createSchemaManager()->tablesExist([$table])) {
-                    $this->connection->executeStatement('DROP TABLE '.$table);
-                }
+        foreach (array_reverse($this->createdTables) as $table) {
+            if ($this->connection->createSchemaManager()->tablesExist([$table])) {
+                $this->connection->executeStatement('DROP TABLE '.$table);
             }
         }
         $this->connection->close();
