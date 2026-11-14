@@ -17,6 +17,10 @@ use SymSvel\Module\Auth\Schema\AuthTokenSchema;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenSubject;
+use SymSvel\Module\Auth\Token\TokenRotation;
+use SymSvel\Module\Auth\Token\RefreshTokenGuard;
+use SymSvel\Module\Auth\Token\RefreshDecision;
+use SymSvel\Module\Auth\Identity\PrincipalStatus;
 
 /**
  * Two real DBAL connections compete for the same refresh row.
@@ -24,6 +28,121 @@ use SymSvel\Module\Auth\Token\TokenSubject;
  */
 final class RefreshLockContentionTest extends TestCase
 {
+    public function testConcurrentRotationsHaveOneWinnerAndRevokeOnReplay(): void
+    {
+        if (!function_exists('pcntl_fork') || !function_exists('pcntl_waitpid')) {
+            self::markTestSkipped('Process concurrency requires pcntl.');
+        }
+
+        $url = getenv('SYMSVEL_AUTH_TEST_DATABASE_URL');
+        $path = $url ? null : tempnam(sys_get_temp_dir(), 'symsvel-auth-fork-');
+        self::assertTrue($url !== false || $path !== false);
+        $params = $url
+            ? (new DsnParser(['postgresql' => 'pdo_pgsql', 'mysql' => 'pdo_mysql', 'mariadb' => 'pdo_mysql']))->parse($url)
+            : ['driver' => 'pdo_sqlite', 'path' => $path];
+        $connection = DriverManager::getConnection($params);
+        $tables = ['symsvel_auth_access_tokens', 'symsvel_auth_refresh_tokens'];
+        $created = [];
+        $childPid = null;
+        $sockets = null;
+
+        try {
+            $manager = $connection->createSchemaManager();
+            foreach ($tables as $table) {
+                self::assertFalse($manager->tablesExist([$table]), 'Use a disposable empty Auth database.');
+            }
+            $schema = new Schema();
+            AuthTokenSchema::apply($schema);
+            foreach ($schema->toSql($connection->getDatabasePlatform()) as $sql) {
+                $connection->executeStatement($sql);
+                foreach ($tables as $table) {
+                    if (!in_array($table, $created, true) && $manager->tablesExist([$table])) {
+                        $created[] = $table;
+                    }
+                }
+            }
+            $now = new \\DateTimeImmutable('2026-11-14T10:00:00+00:00');
+            $pair = (new TokenFactory())->issue('bo', null, $now);
+            $store = new DbalTokenStore($connection);
+            $store->transaction(fn () => $store->savePair(new TokenSubject('bo', 1), $pair, $now));
+            $connection->close(); // Never share a DB connection across fork.
+
+            $sockets = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, 0);
+            self::assertIsArray($sockets);
+            $childPid = pcntl_fork();
+            self::assertNotSame(-1, $childPid);
+            if ($childPid === 0) {
+                fclose($sockets[0]);
+                try {
+                    $signal = fgets($sockets[1]);
+                    if ($signal !== "go\\n") {
+                        exit(3);
+                    }
+                    $childConnection = DriverManager::getConnection($params);
+                    if ($childConnection->getDatabasePlatform() instanceof SQLitePlatform) {
+                        $childConnection->executeStatement('PRAGMA busy_timeout = 5000');
+                    }
+                    $childStore = new DbalTokenStore($childConnection);
+                    $result = (new TokenRotation($childStore, new TokenFactory(), new RefreshTokenGuard(), new ActivePrincipal()))
+                        ->rotate($pair->refresh->raw, 'bo', $now->modify('+2 seconds'));
+                    $childConnection->close();
+                    exit($result->decision === RefreshDecision::RevokeFamily ? 0 : 4);
+                } catch (\\Throwable $e) {
+                    fwrite(STDERR, 'Concurrent child: '.$e->getMessage()."\\n");
+                    exit(5);
+                }
+            }
+
+            fclose($sockets[1]);
+            $parentConnection = DriverManager::getConnection($params);
+            $parentStore = new DbalTokenStore($parentConnection);
+            $principal = new class($sockets[0]) implements PrincipalStatus {
+                public function __construct(private $socket) {}
+                public function isActive(TokenSubject $subject): bool
+                {
+                    fwrite($this->socket, "go\\n");
+                    fflush($this->socket);
+                    usleep(300000); // Child enters rotation while parent holds the row lock.
+                    return true;
+                }
+            };
+            $result = (new TokenRotation($parentStore, new TokenFactory(), new RefreshTokenGuard(), $principal))
+                ->rotate($pair->refresh->raw, 'bo', $now->modify('+1 second'));
+            self::assertSame(RefreshDecision::Rotate, $result->decision);
+            $status = 0;
+            pcntl_waitpid($childPid, $status);
+            $childPid = null;
+            self::assertTrue(pcntl_wifexited($status));
+            self::assertSame(0, pcntl_wexitstatus($status), 'Concurrent replay must revoke the family.');
+            self::assertSame(2, (int) $parentConnection->fetchOne(
+                'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE family_id = ? AND revoked_at IS NOT NULL',
+                [$pair->familyId],
+            ));
+            $parentConnection->close();
+        } finally {
+            if ($sockets !== null) {
+                foreach ($sockets as $socket) {
+                    if (is_resource($socket)) {
+                        fclose($socket);
+                    }
+                }
+            }
+            if ($childPid !== null && $childPid > 0) {
+                pcntl_waitpid($childPid, $status);
+            }
+            $cleanup = DriverManager::getConnection($params);
+            foreach (array_reverse($created) as $table) {
+                if ($cleanup->createSchemaManager()->tablesExist([$table])) {
+                    $cleanup->executeStatement('DROP TABLE '.$table);
+                }
+            }
+            $cleanup->close();
+            if ($path !== null && is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
+
     public function testSecondConnectionFailsClosedWhileFirstHoldsRefreshLock(): void
     {
         $url = getenv('SYMSVEL_AUTH_TEST_DATABASE_URL');
