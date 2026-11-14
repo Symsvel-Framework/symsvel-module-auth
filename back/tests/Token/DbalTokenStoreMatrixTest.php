@@ -6,6 +6,7 @@ namespace SymSvel\Module\Auth\Tests\Token;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Tools\DsnParser;
 use Doctrine\DBAL\Schema\Schema;
 use PHPUnit\Framework\TestCase;
 use SymSvel\Module\Auth\Schema\AuthTokenSchema;
@@ -35,7 +36,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
     {
         $url = getenv('SYMSVEL_AUTH_TEST_DATABASE_URL');
         $this->connection = $url
-            ? DriverManager::getConnection(['url' => $url])
+            ? DriverManager::getConnection((new DsnParser(['postgresql' => 'pdo_pgsql', 'mysql' => 'pdo_mysql', 'mariadb' => 'pdo_mysql']))->parse($url))
             : DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
         $schema = new Schema();
