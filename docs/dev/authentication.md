@@ -171,3 +171,7 @@ La matrice DBAL vérifie désormais les instants exacts d'expiration : un access
 ### Correctif de compatibilité des tests (14/11)
 
 La nouvelle dépendance obligatoire `PrincipalStatus` de `TokenRotation` a révélé un appel resté à trois arguments dans `DbalTokenStoreTest::testSqliteRotationAndReplay`. Le test injecte désormais `ActivePrincipal`, le double explicitement actif déjà utilisé par les autres tests de rotation. Une revue des instanciations `new TokenRotation(...)` des tests a été effectuée pour éviter un second oubli. Ce correctif n'assouplit pas la vérification de l'identité en production. La CI doit confirmer la correction.
+
+### Vérification DBAL de la désactivation (14/11)
+
+Un test d'intégration supplémentaire dans `DbalTokenStoreMatrixTest` confirme, sur les moteurs configurés, qu'un compte BO désactivé ne peut pas renouveler son refresh : aucun nouveau token n'est émis, le refresh d'origine n'est pas consommé, et les deux lignes access/refresh de sa famille sont révoquées en base. Un autre compte BO reste valide, ce qui vérifie l'isolation des identités. Ce test complète la couverture unitaire ; son exécution CI et les crash-tests restent à valider.
