@@ -90,3 +90,9 @@ La matrice DBAL garde une trace de la propriété des tables créées par le tes
 Le nettoyage de la matrice DBAL suit désormais les tables effectivement créées au fil de l'installation du schéma, y compris si une instruction DDL échoue après la création de la première table. Les tables préexistantes ne sont jamais marquées comme appartenant au test. La matrice ajoute les bornes exactes d'expiration : un access ou un refresh arrivant à son expiration est refusé, sans révocation abusive de la famille.
 
 Ces tests ne remplacent pas une simulation de concurrence sur deux connexions indépendantes. La CI du dernier commit doit encore être vérifiée.
+
+## Déconnexion par famille de tokens
+
+`TokenLogout` prend un secret refresh opaque, un contexte `bo` ou `app` et un instant UTC. Dans une transaction, il recherche et verrouille le refresh par son empreinte SHA-256, vérifie son contexte et son état de révocation, puis révoque **tous les access et refresh tokens de sa famille**. Un contexte erroné ou un secret malformé n'entraîne aucune révocation. L'opération est idempotente du point de vue de la sécurité : un refresh déjà révoqué renvoie `false`.
+
+La déconnexion n'expose aucun endpoint. Le transport navigateur, les cookies et l'authentification Symfony restent à raccorder après revue des contrats existants. Les tests couvrent le service isolé et la persistance DBAL.
