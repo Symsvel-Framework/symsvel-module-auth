@@ -221,3 +221,7 @@ Le script PHP inline du job de matrice utilise désormais le namespace DBAL avec
 ### Diagnostic de disponibilité de la matrice (14/11/2026)
 
 Après correction de la syntaxe PHP, les trois jobs de matrice échouaient au contrôle de disponibilité, mais le script masquait systématiquement l'exception DBAL. Le contrôle conserve désormais la dernière erreur de connexion et affiche son message en fin de délai, afin de distinguer un problème de pilote, d'URL, d'authentification ou de disponibilité du conteneur. Cette passe n'affirme pas avoir corrigé la cause sous-jacente ; elle la rend observable pour la prochaine CI.
+
+### DSN DBAL 4 : sélection explicite du pilote
+
+La CI a révélé que `DriverManager::getConnection(['url' => ...])` ne sélectionne pas automatiquement de pilote dans notre version DBAL 4. Le script de disponibilité et les deux suites d'intégration utilisent maintenant `Doctrine\\DBAL\\Tools\\DsnParser` avec une correspondance explicite : `postgresql` → `pdo_pgsql`, `mysql` et `mariadb` → `pdo_mysql`. Les connexions SQLite locales continuent d'utiliser leurs paramètres DBAL natifs. La validation reste soumise à la prochaine CI multi-SGBD.
