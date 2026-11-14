@@ -193,3 +193,11 @@ La composition du conteneur est désormais couverte par une assertion explicite 
 ## Matrice DBAL : unicité de consommation (14/11/2026)
 
 `DbalTokenStoreMatrixTest::testConditionalRefreshConsumptionAllowsOnlyOneWinner` vérifie, sur le SGBD sélectionné par `SYMSVEL_AUTH_TEST_DATABASE_URL` (SQLite en mémoire par défaut), qu'un même refresh ne peut réussir deux transitions conditionnelles `fresh -> used` : la première réussit, la seconde renvoie `false` et une seule ligne porte `used_at`. Cette vérification est **séquentielle**, elle ne prétend pas simuler deux transactions simultanées. Le test SQLite à deux connexions vérifie séparément le blocage d'un lecteur concurrent. La concurrence interprocessus réelle sur PostgreSQL, MySQL et MariaDB reste à valider avant ouverture des endpoints HTTP.
+
+## Contentions entre connexions indépendantes (14/11/2026)
+
+`RefreshLockContentionTest` ouvre deux connexions DBAL distinctes sur une même base de test jetable. La première verrouille le refresh dans une transaction ; la seconde doit échouer à acquérir ce même verrou avant la fin de la première transaction. Après rollback, la seconde doit pouvoir accéder à la ligne. Pour empêcher les CI de rester bloquées, le test fixe un délai d'attente court : SQLite `busy_timeout=0`, PostgreSQL `lock_timeout=200ms`, MySQL/MariaDB `innodb_lock_wait_timeout=1`.
+
+Par défaut, ce test utilise un fichier SQLite temporaire. Pour chaque moteur externe, définir `SYMSVEL_AUTH_TEST_DATABASE_URL` vers **une base vide exclusivement réservée aux tests**, puis lancer `composer qa`. Les deux tables Auth sont créées et supprimées par le test. **Ne jamais utiliser une base projet ou de production.**
+
+Cette épreuve démontre une contention de verrou sur deux connexions, pas encore une course interprocessus complète aboutissant à une rotation concurrente ; cette dernière et les crash-tests locaux sur les quatre SGBD restent à valider avant toute exposition HTTP.
