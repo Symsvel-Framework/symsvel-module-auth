@@ -30,7 +30,7 @@ final class DbalTokenStoreTest extends TestCase
         $original = $factory->issue('bo', null, $now);
         $store->transaction(fn () => $store->savePair(new TokenSubject('bo', 1), $original, $now));
 
-        $rotation = new TokenRotation($store, $factory, new RefreshTokenGuard());
+        $rotation = new TokenRotation($store, $factory, new RefreshTokenGuard(), new ActivePrincipal());
         $result = $rotation->rotate($original->refresh->raw, 'bo', $now->modify('+1 second'));
         self::assertSame(RefreshDecision::Rotate, $result->decision);
         self::assertNotNull($result->pair);
