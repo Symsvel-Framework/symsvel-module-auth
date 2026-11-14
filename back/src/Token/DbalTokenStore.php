@@ -127,6 +127,16 @@ final class DbalTokenStore implements TokenStore, AccessTokenLookup
         );
     }
 
+    public function revokeSubject(TokenSubject $subject, \DateTimeImmutable $at): void
+    {
+        foreach (['symsvel_auth_access_tokens', 'symsvel_auth_refresh_tokens'] as $table) {
+            $this->connection->executeStatement(
+                'UPDATE '.$table.' SET revoked_at = ? WHERE context = ? AND principal_id = ? AND revoked_at IS NULL',
+                [$this->timestamp($at), $subject->context, $subject->id],
+            );
+        }
+    }
+
     private function timestamp(\DateTimeImmutable $date): string
     {
         return $date->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u');
