@@ -14,6 +14,7 @@ use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\RefreshDecision;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
+use SymSvel\Module\Auth\Token\TokenLogout;
 use SymSvel\Module\Auth\Token\TokenRotation;
 use SymSvel\Module\Auth\Token\TokenSubject;
 
@@ -120,6 +121,22 @@ final class DbalTokenStoreMatrixTest extends TestCase
 
         self::assertSame(RefreshDecision::Reject, $rotation->rotate(str_repeat('B', 43), 'bo', $now)->decision);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
+    }
+
+    public function testLogoutRevokesAccessAndRefreshInDatabase(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $factory = new TokenFactory();
+        $pair = $factory->issue('bo', null, $now);
+        $this->store->transaction(fn () => $this->store->savePair(new TokenSubject('bo', 10), $pair, $now));
+        $logout = new TokenLogout($this->store);
+
+        self::assertFalse($logout->logout($pair->refresh->raw, 'app', $now));
+        self::assertSame(10, (new AccessTokenVerifier($this->store))->verify($pair->access->raw, 'bo', $now)?->id);
+        self::assertTrue($logout->logout($pair->refresh->raw, 'bo', $now));
+        self::assertNull((new AccessTokenVerifier($this->store))->verify($pair->access->raw, 'bo', $now));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
+        self::assertFalse($logout->logout($pair->refresh->raw, 'bo', $now));
     }
 
     public function testExpiredTokensAreRejectedWithoutFamilyRevocation(): void
