@@ -34,4 +34,19 @@ final class RefreshTokenGuardTest extends TestCase
         self::assertSame(RefreshDecision::Reject, $guard->decide(new RefreshTokenState('bo', 'family', $now), 'bo', $now));
         self::assertSame(RefreshDecision::Reject, $guard->decide(new RefreshTokenState('bo', 'family', $now->modify('+1 hour'), null, $now), 'bo', $now));
     }
+    public function testWrongContextCannotTriggerReplayRevocation(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $used = new RefreshTokenState('bo', 'family', $now->modify('+1 hour'), $now->modify('-1 minute'));
+
+        self::assertSame(RefreshDecision::Reject, (new RefreshTokenGuard())->decide($used, 'app', $now));
+    }
+
+    public function testUsedAndRevokedTokenIsStillClassifiedAsReplay(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $used = new RefreshTokenState('bo', 'family', $now->modify('+1 hour'), $now, $now);
+
+        self::assertSame(RefreshDecision::RevokeFamily, (new RefreshTokenGuard())->decide($used, 'bo', $now));
+    }
 }
