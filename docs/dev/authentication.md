@@ -255,3 +255,7 @@ La CI doit encore valider ce changement. Ne pas ouvrir le dashboard ni conserver
 `POST /apibo/auth/logout` accepte un Bearer access et un JSON `{ "refresh_token": "…" }`. `BoSessionLogout` vérifie en base que les deux empreintes correspondent au **même contexte BO, même administrateur et même identifiant de famille**, avec des tokens actifs et non expirés, avant de révoquer la famille. Un refresh provenant d'une autre session ne suffit donc pas à déconnecter celle du Bearer. La réponse de succès est 204 sans cache ; un couple invalide renvoie 401.
 
 **Validation encore nécessaire :** tests DBAL multi-SGBD, concurrence et intégration HTTP. Le transport navigateur et la protection globale des routes BO restent à raccorder. Ne pas considérer cette route comme validée pour la production tant que les crash-tests ne sont pas terminés.
+
+## Régression SQLite de déconnexion liée
+
+`BoSessionLogoutTest` crée trois familles indépendantes, deux BO pour le même administrateur et une App. Il vérifie qu'un couple access/refresh provenant de deux familles distinctes est refusé, qu'un couple App est refusé par la route BO, que la révocation est idempotente et que la déconnexion d'une famille ne révoque pas les autres. Ce test n'établit pas encore la sûreté sous concurrence PostgreSQL/MySQL/MariaDB ni le transport navigateur.
