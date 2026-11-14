@@ -125,3 +125,11 @@ La matrice DBAL couvre deux scénarios supplémentaires sur chaque moteur config
 2. **Échec après révocation** : une exception forcée après `revokeSubject` doit restaurer la validité des access et refresh tokens de la session. La révocation de compte est atomique, jamais partielle.
 
 Ces scénarios vérifient les garanties de rollback réelles du stockage DBAL. Ils ne prouvent pas encore la sérialisation de deux rotations concurrentes ; un crash-test à deux connexions reste nécessaire avant validation finale. Les CI des nouveaux commits doivent être confirmées.
+
+## Concurrence SQLite : verrou avant lecture (14/11)
+
+Le verrouillage du refresh SQLite n'utilise pas `SELECT FOR UPDATE`, indisponible sur ce moteur. Après l'ouverture d'une transaction DBAL, `DbalTokenStore::lockRefresh` exécute un `UPDATE ... SET token_hash = token_hash WHERE token_hash = ?` avant le `SELECT`. Cette mise à jour sans changement logique acquiert le verrou d'écriture SQLite **avant** toute lecture du token, empêchant deux transactions de lire simultanément le même refresh encore vierge puis de se concurrencer lors de leur passage en écriture. PostgreSQL, MySQL et MariaDB conservent `SELECT FOR UPDATE`.
+
+`SqliteRefreshLockTest` crée une base SQLite temporaire sur disque et deux connexions DBAL distinctes. La première verrouille le refresh dans une transaction ; la seconde, configurée avec `busy_timeout = 0`, doit échouer sans lire un état exploitable. Après libération du verrou, la seconde doit pouvoir lire le refresh normalement. Le fichier temporaire est supprimé en fin de test et la base de test configurée par l'environnement n'est jamais utilisée pour ce scénario.
+
+Sous charge réelle, une erreur SQLite `database is locked` reste possible : elle doit être traitée comme un échec fermé par la couche HTTP (pas comme une rotation réussie). Le test prouve la contention entre deux connexions, **pas** encore une rotation parallèle orchestrée par deux processus. Cette dernière reste à éprouver localement avec les quatre SGBDR. Ne pas activer un retry automatique de toute la transaction sans étude des effets de bord.
