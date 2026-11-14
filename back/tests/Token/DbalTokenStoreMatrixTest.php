@@ -10,6 +10,7 @@ use Doctrine\DBAL\Schema\Schema;
 use PHPUnit\Framework\TestCase;
 use SymSvel\Module\Auth\Schema\AuthTokenSchema;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
+use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\RefreshDecision;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
@@ -101,4 +102,23 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $this->store->transaction(fn () => $this->store->revokeFamily('bo', $first->familyId, $now));
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE revoked_at IS NULL') + (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NULL'));
     }
+    public function testAccessValidationBeforeAndAfterRotation(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $factory = new TokenFactory();
+        $pair = $factory->issue('bo', null, $now);
+        $this->store->transaction(fn () => $this->store->savePair(new TokenSubject('bo', 10), $pair, $now));
+        $verifier = new AccessTokenVerifier($this->store);
+
+        self::assertSame(10, $verifier->verify($pair->access->raw, 'bo', $now)?->id);
+        self::assertNull($verifier->verify($pair->access->raw, 'app', $now));
+
+        $result = (new TokenRotation($this->store, $factory, new RefreshTokenGuard()))
+            ->rotate($pair->refresh->raw, 'bo', $now->modify('+1 second'));
+        self::assertSame(RefreshDecision::Rotate, $result->decision);
+        self::assertNull($verifier->verify($pair->access->raw, 'bo', $now->modify('+2 seconds')));
+        self::assertNotNull($result->pair);
+        self::assertSame(10, $verifier->verify($result->pair->access->raw, 'bo', $now->modify('+2 seconds'))?->id);
+    }
+
 }
