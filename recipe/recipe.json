@@ -1,0 +1,30 @@
+{
+    "manifests": {
+        "symsvel-framework/module-auth": {
+            "manifest": {
+                "bundles": {
+                    "SymSvel\\Module\\Auth\\AuthBundle": [
+                        "all"
+                    ]
+                },
+                "copy-from-recipe": {
+                    "config/": "%CONFIG_DIR%/"
+                }
+            },
+            "files": {
+                "config/routes/auth.yaml": {
+                    "contents": [
+                        "auth:",
+                        "    resource:",
+                        "        path: '@AuthBundle/src/Controller/'",
+                        "        namespace: SymSvel\\Module\\Auth\\Controller",
+                        "    type: attribute",
+                        ""
+                    ],
+                    "executable": false
+                }
+            },
+            "ref": "REPLACE_WITH_RECIPE_COMMIT_SHA"
+        }
+    }
+}
