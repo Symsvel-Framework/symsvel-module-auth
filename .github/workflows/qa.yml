@@ -61,7 +61,7 @@ jobs:
           $lastError = null;
           for ($i = 0; $i < 20; ++$i) {
               try {
-                  \Doctrine\DBAL\DriverManager::getConnection((new \Doctrine\DBAL\Tools\DsnParser(["postgresql" => "pdo_pgsql", "mysql" => "pdo_mysql", "mariadb" => "pdo_mysql"]))->parse(getenv("DATABASE_URL")))->connect();
+                  \Doctrine\DBAL\DriverManager::getConnection((new \Doctrine\DBAL\Tools\DsnParser(["postgresql" => "pdo_pgsql", "mysql" => "pdo_mysql", "mariadb" => "pdo_mysql"]))->parse(getenv("DATABASE_URL")))->executeQuery("SELECT 1")->fetchOne();
                   exit(0);
               } catch (\Throwable $e) {
                   $lastError = $e;
