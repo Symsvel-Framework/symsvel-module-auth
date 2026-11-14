@@ -22,7 +22,7 @@ Le socle conserve les tokens opaques aléatoires de 256 bits, les empreintes SHA
 
 ## État de validation
 
-Tests unitaires ajoutés pour la génération et les invariants de base. Pas de validation CI ni de crash-test local à ce stade. Aucun endpoint ni firewall activé. La conception des repositories, de l'intégration Symfony Security et des migrations Doctrine Schema reste à auditer/valider avant implémentation.
+Les tests unitaires et la matrice DBAL SQLite sont exécutés en CI (dernier retour utilisateur : vert, 14/11/2026). Les crash-tests locaux multi-SGBD restent à effectuer. Aucun endpoint ni firewall activé. La conception des repositories, de l'intégration Symfony Security et des migrations Doctrine Schema reste à auditer/valider avant implémentation.
 
 ## Politique de renouvellement (socle ajouté)
 
@@ -36,7 +36,7 @@ Tests unitaires ajoutés pour la génération et les invariants de base. Pas de 
 
 Le contrat impose : verrouiller le refresh, vérifier le contexte, effectuer une transition conditionnelle `fresh -> used`, révoquer les anciens access tokens de la famille, persister la nouvelle paire et valider le tout dans une transaction. Un échec de consommation entraîne la révocation de la famille.
 
-**Limite actuelle :** `TokenStore` est une interface ; aucun adaptateur Doctrine/DBAL n'est encore branché. Les tests utilisent un faux stockage, sans garantie réelle d'atomicité ou de rollback. La garantie inter-processus dépendra de l'adaptateur, des contraintes uniques et de tests de concurrence multi-SGBD. Ne pas exposer ce service via un endpoint avant cette validation. L'état actif du compte devra être revérifié lors du renouvellement par l'intégration à l'identité, avant émission des tokens.
+**Évolution depuis cette passe :** `TokenStore` dispose désormais de l'adaptateur `DbalTokenStore`, couvert par des tests de rollback et de persistance. La garantie inter-processus dépendra de l'adaptateur, des contraintes uniques et de tests de concurrence multi-SGBD. Ne pas exposer ce service via un endpoint avant cette validation. L'état actif du compte est désormais vérifié par `PrincipalStatus` dans `TokenRotation`, avant consommation et émission des tokens.
 
 ## Adaptateur DBAL et tables (passe du 14/11)
 
@@ -44,7 +44,7 @@ L'adaptateur `DbalTokenStore` implémente le contrat de stockage sur Doctrine DB
 
 La rotation utilise `SELECT ... FOR UPDATE` sur PostgreSQL/MySQL/MariaDB ; SQLite utilise désormais les transactions gérées par DBAL et une consommation conditionnelle. La sérialisation inter-processus reste à éprouver sous contention réelle ; les erreurs SQLITE_BUSY doivent être traitées explicitement avant exposition. Le test d'intégration SQLite vérifie une rotation suivie d'un rejeu et de la révocation de famille.
 
-**À vérifier impérativement :** le point d'entrée exact du compilateur Schema SymSvel, la compatibilité DBAL 4 des migrations, la gestion des transactions imbriquées, le comportement réel des verrous et les tests concurrents sur quatre SGBD. La définition Schema n'est pas encore branchée sur le mécanisme de compilation des migrations. Aucun endpoint n'est activé. Le contrôle d'état du principal et la gestion d'éventuelles politiques 2FA restent à intégrer avant exposition.
+**À vérifier impérativement :** le point d'entrée exact du compilateur Schema SymSvel, la compatibilité DBAL 4 des migrations, la gestion des transactions imbriquées, le comportement réel des verrous et les tests concurrents sur quatre SGBD. La définition Schema n'est pas encore branchée sur le mécanisme de compilation des migrations. Aucun endpoint n'est activé. Le contrôle d'état du principal est intégré aux services de login, de vérification access et de rotation, mais les fournisseurs concrets Admins/Users et les éventuelles politiques 2FA restent à intégrer avant exposition.
 
 ## Matrice de tests DBAL (14/11, passe suivante)
 
@@ -175,3 +175,7 @@ La nouvelle dépendance obligatoire `PrincipalStatus` de `TokenRotation` a rév�
 ### Vérification DBAL de la désactivation (14/11)
 
 Un test d'intégration supplémentaire dans `DbalTokenStoreMatrixTest` confirme, sur les moteurs configurés, qu'un compte BO désactivé ne peut pas renouveler son refresh : aucun nouveau token n'est émis, le refresh d'origine n'est pas consommé, et les deux lignes access/refresh de sa famille sont révoquées en base. Un autre compte BO reste valide, ce qui vérifie l'isolation des identités. Ce test complète la couverture unitaire ; son exécution CI et les crash-tests restent à valider.
+
+## État consolidé au 14/11/2026
+
+**Validé par les dernières CI rapportées :** tests unitaires et intégration SQLite des services de tokens, login, contrôle du compte actif et révocation des familles. L'adaptateur DBAL existe, les contrats `PasswordPrincipal` et `PrincipalStatus` sont obligatoires. **Non validé :** crash-tests locaux PostgreSQL/MySQL/MariaDB, concurrence réelle entre connexions, branchement des migrations Schema au compilateur, adaptateurs concrets Admins/Users, intégration Symfony Security et politique HTTP/cookies/CSRF/CORS. Les passages précédents de ce document décrivent l'historique de construction, pas toujours l'état actuel ; ce récapitulatif prévaut pour le suivi des chantiers.
