@@ -70,6 +70,30 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $this->connection->close();
     }
 
+    public function testConditionalRefreshConsumptionAllowsOnlyOneWinner(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $pair = (new TokenFactory())->issue('bo', null, $now);
+        $subject = new TokenSubject('bo', 41);
+        $this->store->transaction(fn () => $this->store->savePair($subject, $pair, $now));
+
+        // Two contenders can hold the same secret. The database must accept
+        // exactly one conditional fresh -> used transition.
+        $first = $this->store->transaction(
+            fn () => $this->store->consumeRefresh($pair->refresh->hash, $now->modify('+1 second')),
+        );
+        $second = $this->store->transaction(
+            fn () => $this->store->consumeRefresh($pair->refresh->hash, $now->modify('+1 second')),
+        );
+
+        self::assertTrue($first);
+        self::assertFalse($second);
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE token_hash = ? AND used_at IS NOT NULL',
+            [$pair->refresh->hash],
+        ));
+    }
+
     public function testRotationReplayAndContextIsolation(): void
     {
         $factory = new TokenFactory();
