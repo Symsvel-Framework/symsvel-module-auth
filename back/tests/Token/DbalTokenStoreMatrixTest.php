@@ -373,4 +373,35 @@ final class DbalTokenStoreMatrixTest extends TestCase
         ));
     }
 
+    public function testDisabledPrincipalCannotRefreshAndWholeFamilyIsRevokedInDatabase(): void
+    {
+        $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
+        $subject = new TokenSubject('bo', 51);
+        $issuer = new TokenIssuer($this->store, new TokenFactory());
+        $pair = $issuer->issue($subject, $now);
+        $other = $issuer->issue(new TokenSubject('bo', 52), $now);
+        $principals = new ActivePrincipal();
+        $principals->active = false;
+
+        $result = (new TokenRotation($this->store, new TokenFactory(), new RefreshTokenGuard(), $principals))
+            ->rotate($pair->refresh->raw, 'bo', $now->modify('+1 second'));
+
+        self::assertSame(RefreshDecision::Reject, $result->decision);
+        self::assertNull($result->pair);
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE principal_id = ? AND revoked_at IS NOT NULL',
+            [51],
+        ));
+        self::assertSame(1, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE principal_id = ? AND revoked_at IS NOT NULL',
+            [51],
+        ));
+        self::assertSame(0, (int) $this->connection->fetchOne(
+            'SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE principal_id = ? AND used_at IS NOT NULL',
+            [51],
+        ));
+        self::assertNull((new AccessTokenVerifier($this->store))->verify($pair->access->raw, 'bo', $now));
+        self::assertSame(52, (new AccessTokenVerifier($this->store))->verify($other->access->raw, 'bo', $now)?->id);
+    }
+
 }
