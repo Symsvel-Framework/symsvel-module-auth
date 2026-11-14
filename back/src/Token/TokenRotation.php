@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SymSvel\Module\Auth\Token;
 
+use SymSvel\Module\Auth\Identity\PrincipalStatus;
+
 /**
  * Orchestre la rotation dans une transaction de TokenStore.
  * Aucune émission de token ne doit être exposée avant le commit.
@@ -14,6 +16,7 @@ final readonly class TokenRotation
         private TokenStore $store,
         private TokenFactory $factory,
         private RefreshTokenGuard $guard,
+        private PrincipalStatus $principals,
     ) {
     }
 
@@ -37,6 +40,13 @@ final readonly class TokenRotation
                 return new RefreshResult(RefreshDecision::RevokeFamily);
             }
             if ($decision !== RefreshDecision::Rotate) {
+                return new RefreshResult(RefreshDecision::Reject);
+            }
+
+            if (!$this->principals->isActive($record->subject)) {
+                // An inactive or deleted principal must not renew a session.
+                $this->store->revokeFamily($context, $record->state->familyId, $now);
+
                 return new RefreshResult(RefreshDecision::Reject);
             }
 
