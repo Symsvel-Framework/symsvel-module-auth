@@ -11,11 +11,12 @@ use SymSvel\Module\Mails\Mail\RegisteredMailRenderer;
 
 /**
  * Internal service, not an HTTP endpoint. The caller must enforce anti-abuse
- * limits and provide a reset page URL from trusted server configuration.
+ * client IP from trusted proxy resolution and a reset page URL from server configuration.
  */
 final readonly class PasswordResetDispatch
 {
     public function __construct(
+        private PasswordResetLimiter $limiter,
         private ContextPasswordResetIdentity $identities,
         private DbalPasswordResetStore $resets,
         private RegisteredMailRenderer $renderer,
@@ -28,6 +29,7 @@ final readonly class PasswordResetDispatch
         string $identifier,
         string $locale,
         string $trustedResetPageUrl,
+        string $clientIp,
         \DateTimeImmutable $now,
     ): bool {
         if (!in_array($context, ['bo', 'app'], true)) {
@@ -43,6 +45,11 @@ final readonly class PasswordResetDispatch
             || isset($parts['query']) || isset($parts['fragment'])
             || preg_match('/[\r\n]/', $trustedResetPageUrl)) {
             throw new \InvalidArgumentException('Trusted HTTPS reset page URL required.');
+        }
+
+        // Always reserve before looking up a subject, including unknown accounts.
+        if (!$this->limiter->allow($context, $identifier, $clientIp, $now)) {
+            return false;
         }
 
         $subject = $this->identities->find($context, $identifier);
