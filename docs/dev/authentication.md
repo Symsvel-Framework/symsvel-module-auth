@@ -335,3 +335,7 @@ Correction de la parenthèse fermante du contrôle `in_array()` dans `PasswordRe
 ### Renforcement du test de persistance (15/11/2026)
 
 Le test `PasswordResetCompletionTest` utilise désormais une table SQLite `test_reset_accounts` et un provider DBAL plutôt qu'une propriété PHP simulant le stockage. Il vérifie la persistance réelle du hash Argon2id, le marquage du jeton et la révocation des deux catégories de sessions. Le scénario d'échec compare l'empreinte avant/après rollback, puis réessaie le même jeton. Ce test ne remplace pas les crash-tests multibase et de concurrence ; CI de cette passe à confirmer.
+
+### Matrice multibase de récupération (15/11/2026)
+
+`PasswordResetMatrixTest` reprend `SYMSVEL_AUTH_TEST_DATABASE_URL` et la matrice CI existante : SQLite en mémoire pour la suite standard, PostgreSQL 17, MySQL 8.4 et MariaDB 11.4 dans le job `database-matrix`. Il crée des tables de test dédiées et vérifie sur la base réelle le rollback d'un refus de modification, la persistance Argon2id, l'isolation BO/App, la consommation unique et la révocation des sessions access/refresh. Il exige une base de test vide et supprime ses tables en fin d'exécution. **Cette matrice ne simule pas deux transactions simultanées** : les crash-tests de contention et d'installation réelle restent distincts. CI de cette passe à confirmer.
