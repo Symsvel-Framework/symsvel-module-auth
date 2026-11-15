@@ -15,6 +15,7 @@ use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
+use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
@@ -78,6 +79,7 @@ final class AuthBundleServicesTest extends TestCase
             PasswordLogin::class,
             PasswordResetLimiter::class,
             PasswordResetDispatch::class,
+            EmailVerificationDispatch::class,
             AuthenticatedTokenResolver::class,
             TokenIssuer::class,
             TokenRotation::class,
