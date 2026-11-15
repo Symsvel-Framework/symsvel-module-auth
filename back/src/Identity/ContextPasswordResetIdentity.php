@@ -26,13 +26,13 @@ final class ContextPasswordResetIdentity
 
     public function find(string $context, string $identifier): ?TokenSubject
     {
-        $subject = $this->providers[$context]?->findResetSubject($identifier) ?? null;
+        $subject = ($this->providers[$context] ?? null)?->findResetSubject($identifier);
 
         return $subject?->context === $context ? $subject : null;
     }
 
     public function replace(TokenSubject $subject, string $newPasswordHash): bool
     {
-        return $this->providers[$subject->context]?->replacePassword($subject, $newPasswordHash) ?? false;
+        return ($this->providers[$subject->context] ?? null)?->replacePassword($subject, $newPasswordHash) ?? false;
     }
 }
