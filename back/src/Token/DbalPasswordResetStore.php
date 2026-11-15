@@ -47,18 +47,22 @@ final readonly class DbalPasswordResetStore
         }
 
         return $this->connection->transactional(function () use ($context, $hash, $now): ?int {
-            $row = $this->connection->fetchAssociative(
-                'SELECT principal_id FROM symsvel_auth_password_reset_tokens WHERE context = ? AND token_hash = ? AND used_at IS NULL AND expires_at > ?',
-                [$context, $hash, self::timestamp($now)],
-            );
-            if ($row === false) {
-                return null;
-            }
+            // Lock by conditional write before reading, including on SQLite.
             $changed = $this->connection->executeStatement(
                 'UPDATE symsvel_auth_password_reset_tokens SET used_at = ? WHERE context = ? AND token_hash = ? AND used_at IS NULL AND expires_at > ?',
                 [self::timestamp($now), $context, $hash, self::timestamp($now)],
             );
-            return $changed === 1 ? (int) $row['principal_id'] : null;
+            if ($changed !== 1) {
+                return null;
+            }
+            $id = $this->connection->fetchOne(
+                'SELECT principal_id FROM symsvel_auth_password_reset_tokens WHERE context = ? AND token_hash = ?',
+                [$context, $hash],
+            );
+            if ($id === false) {
+                throw new \LogicException('Consumed password reset token disappeared inside transaction.');
+            }
+            return (int) $id;
         });
     }
 
