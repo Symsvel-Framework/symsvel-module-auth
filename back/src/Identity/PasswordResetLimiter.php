@@ -25,8 +25,22 @@ final readonly class PasswordResetLimiter
 
     public function allow(string $context, string $identifier, string $clientIp, \DateTimeImmutable $now): bool
     {
+        return $this->reserveRequest($context, $identifier, $clientIp, $now, 'identifier', 'ip');
+    }
+
+    /** Separate quota namespace for mailbox confirmation requests. */
+    public function allowVerification(string $context, string $identifier, string $clientIp, \DateTimeImmutable $now): bool
+    {
+        return $this->reserveRequest($context, $identifier, $clientIp, $now, 'verify_id', 'verify_ip');
+    }
+
+    private function reserveRequest(
+        string $context, string $identifier, string $clientIp, \DateTimeImmutable $now,
+        string $identifierScope, string $ipScope,
+    ): bool {
+
         if (!in_array($context, ['bo', 'app'], true)
-            || $identifier === '' || strlen($identifier) > 1024
+            || trim($identifier) === '' || strlen($identifier) > 1024
             || filter_var($clientIp, FILTER_VALIDATE_IP) === false) {
             return false;
         }
@@ -34,9 +48,9 @@ final readonly class PasswordResetLimiter
         // Both reservations are committed together. If either bucket is already
         // occupied the whole attempt is denied, including unknown accounts.
         try {
-            return $this->connection->transactional(function () use ($context, $identifier, $clientIp, $now): bool {
-                $this->reserve($context, 'identifier', strtolower(trim($identifier)), 300, $now);
-                $this->reserve($context, 'ip', $clientIp, 10, $now);
+            return $this->connection->transactional(function () use ($context, $identifier, $clientIp, $now, $identifierScope, $ipScope): bool {
+                $this->reserve($context, $identifierScope, strtolower(trim($identifier)), 300, $now);
+                $this->reserve($context, $ipScope, $clientIp, 10, $now);
 
                 return true;
             });
