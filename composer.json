@@ -6,7 +6,8 @@
     "require": {
         "php": ">=8.4",
         "symfony/framework-bundle": "^8.1",
-        "doctrine/dbal": "^4.0"
+        "doctrine/dbal": "^4.0",
+        "symsvel-framework/module-mails": "dev-dev"
     },
     "autoload": {
         "psr-4": {
@@ -34,5 +35,11 @@
         "branch-alias": {
             "dev-main": "1.0.x-dev"
         }
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Symsvel-Framework/symsvel-module-mails.git"
+        }
+    ]
 }
