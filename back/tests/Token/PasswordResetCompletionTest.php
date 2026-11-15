@@ -30,7 +30,8 @@ final class PasswordResetCompletionTest extends TestCase
         $pair = (new TokenFactory())->issue('bo', null, $now);
         $sessions->savePair($subject, $pair, $now);
         self::assertTrue($completion->complete('bo', $token->raw, 'long-enough-password', $now));
-        self::assertTrue(password_verify('long-enough-password', $provider->hash));
+        self::assertTrue(password_verify('long-enough-password', (string) $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5')));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE revoked_at IS NOT NULL'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
         self::assertFalse($completion->complete('bo', $token->raw, 'another-long-password', $now));
@@ -43,9 +44,11 @@ final class PasswordResetCompletionTest extends TestCase
         $now = new \DateTimeImmutable('2026-11-15T12:00:00+00:00');
         $token = PasswordResetToken::issue('bo', $now);
         $resets->save(new TokenSubject('bo', 5), $token, $now);
+        $originalHash = (string) $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5');
         $provider->allow = false;
         self::assertFalse($completion->complete('bo', $token->raw, 'long-enough-password', $now));
         self::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
+        self::assertSame($originalHash, $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5'));
         $provider->allow = true;
         self::assertTrue($completion->complete('bo', $token->raw, 'long-enough-password', $now));
     }
@@ -59,16 +62,17 @@ final class PasswordResetCompletionTest extends TestCase
         foreach ($schema->toSql($connection->getDatabasePlatform()) as $sql) {
             $connection->executeStatement($sql);
         }
-        $provider = new class implements PasswordResetIdentity {
+        $connection->executeStatement('CREATE TABLE test_reset_accounts (id INTEGER PRIMARY KEY, password_hash VARCHAR(255) NOT NULL, enabled INTEGER NOT NULL)');
+        $connection->insert('test_reset_accounts', ['id' => 5, 'password_hash' => password_hash('original-password', PASSWORD_ARGON2ID), 'enabled' => 1]);
+        $provider = new class($connection) implements PasswordResetIdentity {
+            public function __construct(private readonly \Doctrine\DBAL\Connection $connection) {}
             public bool $allow = true;
-            public string $hash = '';
             public function authContext(): string { return 'bo'; }
             public function findResetSubject(string $identifier): ?TokenSubject { return new TokenSubject('bo', 5); }
             public function replacePassword(TokenSubject $subject, string $newPasswordHash): bool
             {
                 if (!$this->allow) { return false; }
-                $this->hash = $newPasswordHash;
-                return true;
+                return $this->connection->executeStatement('UPDATE test_reset_accounts SET password_hash = ? WHERE id = ? AND enabled = 1', [$newPasswordHash, $subject->id]) === 1;
             }
         };
         $resets = new DbalPasswordResetStore($connection);
