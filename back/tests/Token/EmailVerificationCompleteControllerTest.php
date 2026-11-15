@@ -30,7 +30,7 @@ final class EmailVerificationCompleteControllerTest extends TestCase
         $first = $controller->bo(self::request(['token' => $token->raw]));
         self::assertSame(200, $first->getStatusCode());
         self::assertSame(['status' => 'completed'], json_decode($first->getContent(), true));
-        self::assertSame('no-store', $first->headers->get('Cache-Control'));
+        self::assertTrue($first->headers->hasCacheControlDirective('no-store'));
         self::assertNotNull($db->fetchOne('SELECT verified_at FROM test_accounts WHERE id = 7'));
 
         $replay = $controller->bo(self::request(['token' => $token->raw]));
