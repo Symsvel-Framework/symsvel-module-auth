@@ -25,7 +25,7 @@ final readonly class PasswordResetCompletion
 
     public function complete(string $context, string $rawToken, string $newPassword, \DateTimeImmutable $now): bool
     {
-        if (!in_array($context, ['bo', 'app'], true]) || strlen($newPassword) < 12 || strlen($newPassword) > 1024) {
+        if (!in_array($context, ['bo', 'app'], true) || strlen($newPassword) < 12 || strlen($newPassword) > 1024) {
             return false;
         }
 
@@ -33,18 +33,18 @@ final readonly class PasswordResetCompletion
 
         try {
             return $this->connection->transactional(function () use ($context, $rawToken, $hash, $now): bool {
-            $id = $this->resets->consume($context, $rawToken, $now);
-            if ($id === null) {
-                return false;
-            }
+                $id = $this->resets->consume($context, $rawToken, $now);
+                if ($id === null) {
+                    return false;
+                }
 
-            $subject = new TokenSubject($context, $id);
-            if (!$this->identities->replace($subject, $hash)) {
-                // Do not consume a token when the owning account cannot be updated.
-                throw new PasswordResetAccountUnavailable();
-            }
+                $subject = new TokenSubject($context, $id);
+                if (!$this->identities->replace($subject, $hash)) {
+                    // Do not consume a token when the owning account cannot be updated.
+                    throw new PasswordResetAccountUnavailable();
+                }
 
-            $this->sessions->revokeSubject($subject, $now);
+                $this->sessions->revokeSubject($subject, $now);
 
                 return true;
             });
