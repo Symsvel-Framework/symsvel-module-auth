@@ -10,6 +10,7 @@ use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use SymSvel\Module\Auth\AuthBundle;
+use SymSvel\Module\Auth\Controller\EmailVerificationCompleteController;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
@@ -42,6 +43,9 @@ final class AuthBundleServicesTest extends TestCase
         // needed to inspect the Symfony service definitions.
         $configurator = (new \ReflectionClass(ContainerConfigurator::class))->newInstanceWithoutConstructor();
         (new AuthBundle())->loadExtension([], $configurator, $builder);
+
+        self::assertTrue($builder->hasDefinition(EmailVerificationCompleteController::class));
+        self::assertArrayHasKey('controller.service_arguments', $builder->getDefinition(EmailVerificationCompleteController::class)->getTags());
 
         self::assertTrue($builder->hasDefinition(ContextEmailVerificationIdentity::class));
         $emailOwners = $builder->getDefinition(ContextEmailVerificationIdentity::class)->getArgument('$providers');
