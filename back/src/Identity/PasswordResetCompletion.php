@@ -31,7 +31,8 @@ final readonly class PasswordResetCompletion
 
         $hash = password_hash($newPassword, PASSWORD_ARGON2ID);
 
-        return $this->connection->transactional(function () use ($context, $rawToken, $hash, $now): bool {
+        try {
+            return $this->connection->transactional(function () use ($context, $rawToken, $hash, $now): bool {
             $id = $this->resets->consume($context, $rawToken, $now);
             if ($id === null) {
                 return false;
@@ -45,7 +46,10 @@ final readonly class PasswordResetCompletion
 
             $this->sessions->revokeSubject($subject, $now);
 
-            return true;
-        });
+                return true;
+            });
+        } catch (PasswordResetAccountUnavailable) {
+            return false;
+        }
     }
 }
