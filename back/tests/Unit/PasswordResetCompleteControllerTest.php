@@ -62,6 +62,7 @@ final class PasswordResetCompleteControllerTest extends TestCase
             public ?string $hash = null;
             public function authContext(): string { return 'bo'; }
             public function findResetSubject(string $identifier): ?TokenSubject { return new TokenSubject('bo', 8); }
+            public function recoveryEmail(TokenSubject $subject): ?string { return $subject->context === 'bo' ? 'admin@example.test' : null; }
             public function replacePassword(TokenSubject $subject, string $newPasswordHash): bool
             {
                 $this->hash = $newPasswordHash;
