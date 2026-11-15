@@ -339,3 +339,7 @@ Le test `PasswordResetCompletionTest` utilise désormais une table SQLite `test_
 ### Matrice multibase de récupération (15/11/2026)
 
 `PasswordResetMatrixTest` reprend `SYMSVEL_AUTH_TEST_DATABASE_URL` et la matrice CI existante : SQLite en mémoire pour la suite standard, PostgreSQL 17, MySQL 8.4 et MariaDB 11.4 dans le job `database-matrix`. Il crée des tables de test dédiées et vérifie sur la base réelle le rollback d'un refus de modification, la persistance Argon2id, l'isolation BO/App, la consommation unique et la révocation des sessions access/refresh. Il exige une base de test vide et supprime ses tables en fin d'exécution. **Cette matrice ne simule pas deux transactions simultanées** : les crash-tests de contention et d'installation réelle restent distincts. CI de cette passe à confirmer.
+
+### Préparation à la contention du jeton de récupération (15/11/2026)
+
+`DbalPasswordResetStore::consume()` exécute désormais son `UPDATE` conditionnel avant de lire l'identifiant du compte. L'écriture obtient le verrou avant toute lecture dans la transaction, notamment pour éviter une conversion de transaction de lecture en écriture sous SQLite. L'identifiant n'est consulté qu'après une modification unique réussie. La transaction externe de `PasswordResetCompletion` conserve le rollback global. **La concurrence réelle entre deux connexions reste à valider par un test de contention dédié** ; CI de cette correction à confirmer.
