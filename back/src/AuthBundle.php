@@ -24,6 +24,8 @@ use SymSvel\Module\Auth\Identity\PasswordResetCompletion;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
+use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
+use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
@@ -51,6 +53,10 @@ final class AuthBundle extends AbstractBundle
     {
         $builder->register(AuthMailTemplateProvider::class, AuthMailTemplateProvider::class)
             ->addTag('symsvel.mails.template_provider');
+        $builder->register(AuthSettingDefinitionProvider::class, AuthSettingDefinitionProvider::class)
+            ->addTag('symsvel.settings.definition_provider');
+        $builder->register(PasswordResetUrlResolver::class, PasswordResetUrlResolver::class)
+            ->setAutowired(true);
 
         // Reuse the same DBAL connection as the host application.
         $builder->register(DbalTokenStore::class, DbalTokenStore::class)
