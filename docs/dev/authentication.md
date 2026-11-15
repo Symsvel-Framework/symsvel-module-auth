@@ -347,3 +347,7 @@ Le test `PasswordResetCompletionTest` utilise désormais une table SQLite `test_
 ### Test de contention du jeton de récupération (15/11/2026)
 
 `PasswordResetLockContentionTest` utilise deux connexions DBAL distinctes, la même URL de base de test dédiée que la matrice et un SQLite fichier temporaire par défaut. La connexion A consomme le jeton dans une transaction non validée ; B doit échouer sous un délai de verrou borné (SQLite `busy_timeout=0`, PostgreSQL `lock_timeout=200ms`, MySQL/MariaDB `innodb_lock_wait_timeout=1`). Après le commit de A, B doit constater un jeton déjà consommé et la base doit contenir exactement une consommation. Ce test vérifie la contention au niveau du stockage ; il ne remplace pas un crash-test HTTP de deux réinitialisations complètes. CI de cette passe à confirmer.
+
+### Revue des routes de récupération (15/11/2026)
+
+La revue du module confirme les conventions `/apibo/auth/*` pour le BO, les providers de récupération par contexte et les templates Mails natifs `auth.bo.password_reset` / `auth.app.password_reset`. Les endpoints de demande et de finalisation de récupération ne sont pas encore exposés : leur contrat et l'envoi doivent être raccordés aux services Mails existants avant ajout. Correction associée : `ContextPasswordResetIdentity` traite désormais un contexte non enregistré par `null`/`false` sans accès à une clé de tableau absente ; le test existant couvre le cas App absent. CI à confirmer.
