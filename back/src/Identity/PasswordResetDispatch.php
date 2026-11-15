@@ -6,17 +6,19 @@ namespace SymSvel\Module\Auth\Identity;
 
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\PasswordResetToken;
+use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Mails\Mail\ConfiguredMailSender;
 use SymSvel\Module\Mails\Mail\RegisteredMailRenderer;
 
 /**
  * Internal service, not an HTTP endpoint. The caller must enforce anti-abuse
- * client IP from trusted proxy resolution and a reset page URL from server configuration.
+ * client IP from trusted proxy resolution. The URL is obtained from Settings.
  */
 final readonly class PasswordResetDispatch
 {
     public function __construct(
         private PasswordResetLimiter $limiter,
+        private PasswordResetUrlResolver $urls,
         private ContextPasswordResetIdentity $identities,
         private DbalPasswordResetStore $resets,
         private RegisteredMailRenderer $renderer,
@@ -28,7 +30,6 @@ final readonly class PasswordResetDispatch
         string $context,
         string $identifier,
         string $locale,
-        string $trustedResetPageUrl,
         string $clientIp,
         \DateTimeImmutable $now,
     ): bool {
@@ -36,16 +37,8 @@ final readonly class PasswordResetDispatch
             throw new \InvalidArgumentException('Invalid password reset context.');
         }
 
-        // HTTP callers must never pass an origin copied from request headers or payload.
-        $parts = parse_url($trustedResetPageUrl);
-        if (!is_array($parts)
-            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
-            || empty($parts['host'])
-            || isset($parts['user']) || isset($parts['pass'])
-            || isset($parts['query']) || isset($parts['fragment'])
-            || preg_match('/[\r\n]/', $trustedResetPageUrl)) {
-            throw new \InvalidArgumentException('Trusted HTTPS reset page URL required.');
-        }
+        // Read only the server-side configured URL before reserving a quota.
+        $trustedResetPageUrl = $this->urls->forContext($context);
 
         // Always reserve before looking up a subject, including unknown accounts.
         if (!$this->limiter->allow($context, $identifier, $clientIp, $now)) {
