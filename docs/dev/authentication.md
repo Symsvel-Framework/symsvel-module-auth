@@ -295,3 +295,7 @@ Le secret doit être accessible au dépôt Auth et autorisé à lire `Symsvel-Fr
 ### Résolution des dépendances privées transitives
 
 Composer ne reprend pas les entrées `repositories` des paquets dépendants. Auth doit donc déclarer dans son propre `composer.json` les dépôts VCS de `symsvel-framework/module-mails` **et** de `symsvel-framework/module-settings` : Mails exige Settings en `dev-dev`. Le jeton CI donne accès aux dépôts privés, mais ne remplace pas leur déclaration dans le projet racine. La CI doit confirmer cette résolution avant validation.
+
+### Stabilité Composer de Settings
+
+Le dépôt Settings est désormais découvert par Composer, mais sa branche `dev-dev` n'est pas admissible comme simple dépendance transitive avec la stabilité minimale implicite `stable`. Auth déclare donc explicitement `symsvel-framework/module-settings:dev-dev` dans ses dépendances racine, en complément de Mails. Cette autorisation ciblée n'abaisse pas `minimum-stability` pour les autres paquets. Elle sera réévaluée quand une release de Settings contiendra le contrat de définitions requis par Mails. Validation CI encore attendue.
