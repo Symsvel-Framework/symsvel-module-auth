@@ -21,6 +21,20 @@ final class AuthSettingDefinitionProvider implements SettingDefinitionProviderIn
             description: 'URL HTTPS publique de la page BO de changement de mot de passe, sans paramètre.',
         );
         yield new SettingDefinition(
+            key: 'bo_verify_email_url',
+            label: 'URL de confirmation d’adresse e-mail BO',
+            group: 'authentication',
+            type: 'url',
+            description: 'URL HTTPS de confirmation BO, sans paramètres de requête.',
+        );
+        yield new SettingDefinition(
+            key: 'app_verify_email_url',
+            label: 'URL de confirmation d’adresse e-mail App',
+            group: 'authentication',
+            type: 'url',
+            description: 'URL HTTPS de confirmation App, si App est installée.',
+        );
+        yield new SettingDefinition(
             key: 'app_reset_url',
             label: 'URL de récupération du mot de passe App',
             group: 'authentication',
