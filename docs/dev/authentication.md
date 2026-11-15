@@ -481,3 +481,9 @@ Le contrôleur est enregistré avec `controller.service_arguments` dans `AuthBun
 ## Ajustement du test HTTP Cache-Control (15/11/2026)
 
 Symfony HttpFoundation peut compléter `Cache-Control: no-store` par la directive `private`. Le test de confirmation BO vérifie désormais la présence de la directive de sécurité `no-store` via `hasCacheControlDirective('no-store')`, plutôt que de comparer l'en-tête entier à une chaîne exacte. Le comportement de l'endpoint reste inchangé ; il interdit toujours le stockage de la réponse. CI de ce correctif à confirmer.
+
+## Diagnostic des accès GitHub privés dans les CI (15/11/2026)
+
+Le workflow `qa.yml` fournit explicitement le secret GitHub Actions `SYMSVEL_READ_TOKEN` à Composer via `COMPOSER_AUTH` (`github-oauth`). Avant installation, il refuse un secret absent et contrôle en lecture, par l'API GitHub, l'accès aux dépôts privés `symsvel-module-auth`, `symsvel-module-mails` et `symsvel-module-settings`. En cas d'absence, d'expiration ou de permissions insuffisantes, la CI échoue avec un diagnostic explicite **avant** `composer install` plutôt qu'un message générique de Composer. La valeur du jeton n'est jamais affichée. Les runners auto-hébergés ne doivent pas dépendre d'une authentification Composer laissée dans leur cache local.
+
+**Configuration à maintenir :** secret `SYMSVEL_READ_TOKEN` lisible dans chacun des trois dépôts GitHub Actions (ou via une configuration de secrets autorisée), avec droits de lecture sur les dépôts privés requis. Un `GITHUB_TOKEN` standard limité au dépôt du workflow ne suffit pas pour ces dépendances inter-dépôts. Un jeton révoqué ou expiré doit être remplacé dans les secrets GitHub, pas en dur dans `composer.json` ou les logs. CI de ce correctif à confirmer ; aucune modification du runtime.
