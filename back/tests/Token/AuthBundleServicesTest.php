@@ -13,6 +13,8 @@ use SymSvel\Module\Auth\AuthBundle;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
+use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
+use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
@@ -38,6 +40,13 @@ final class AuthBundleServicesTest extends TestCase
         // needed to inspect the Symfony service definitions.
         $configurator = (new \ReflectionClass(ContainerConfigurator::class))->newInstanceWithoutConstructor();
         (new AuthBundle())->loadExtension([], $configurator, $builder);
+
+        self::assertTrue($builder->hasDefinition(ContextEmailVerificationIdentity::class));
+        $emailOwners = $builder->getDefinition(ContextEmailVerificationIdentity::class)->getArgument('$providers');
+        self::assertInstanceOf(TaggedIteratorArgument::class, $emailOwners);
+        self::assertSame('symsvel.auth.email_verification_identity', $emailOwners->getTag());
+        self::assertTrue($builder->hasDefinition(EmailVerificationCompletion::class));
+        self::assertTrue($builder->getDefinition(EmailVerificationCompletion::class)->isAutowired());
 
         self::assertTrue($builder->hasDefinition(AuthSettingDefinitionProvider::class));
         self::assertArrayHasKey('symsvel.settings.definition_provider', $builder->getDefinition(AuthSettingDefinitionProvider::class)->getTags());
