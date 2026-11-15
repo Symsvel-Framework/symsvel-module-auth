@@ -6,6 +6,7 @@ namespace SymSvel\Module\Auth\Tests\Token;
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use SymSvel\Module\Auth\AuthBundle;
@@ -36,6 +37,9 @@ final class AuthBundleServicesTest extends TestCase
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PasswordPrincipal::class));
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PrincipalStatus::class));
         self::assertTrue($builder->getDefinition(ContextIdentityProvider::class)->isAutowired());
+        $providers = $builder->getDefinition(ContextIdentityProvider::class)->getArgument('$providers');
+        self::assertInstanceOf(TaggedIteratorArgument::class, $providers);
+        self::assertSame('symsvel.auth.identity_provider', $providers->getTag());
 
         self::assertSame(DbalTokenStore::class, (string) $builder->getAlias(TokenStore::class));
         self::assertSame(DbalTokenStore::class, (string) $builder->getAlias(AccessTokenLookup::class));
