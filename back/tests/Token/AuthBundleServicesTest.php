@@ -17,6 +17,7 @@ use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
+use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
 use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
@@ -52,6 +53,8 @@ final class AuthBundleServicesTest extends TestCase
         self::assertArrayHasKey('symsvel.settings.definition_provider', $builder->getDefinition(AuthSettingDefinitionProvider::class)->getTags());
         self::assertTrue($builder->hasDefinition(PasswordResetUrlResolver::class));
         self::assertTrue($builder->getDefinition(PasswordResetUrlResolver::class)->isAutowired());
+        self::assertTrue($builder->hasDefinition(EmailVerificationUrlResolver::class));
+        self::assertTrue($builder->getDefinition(EmailVerificationUrlResolver::class)->isAutowired());
 
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PasswordPrincipal::class));
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PrincipalStatus::class));
