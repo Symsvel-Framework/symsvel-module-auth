@@ -319,3 +319,7 @@ La migration Schema `Version20200101000502` ajoute `symsvel_auth_password_reset_
 ### Contrat d'identité pour la récupération (en cours)
 
 `PasswordResetIdentity` définit les deux opérations relevant des modules propriétaires de comptes : retrouver un sujet actif à partir d'un identifiant et remplacer son empreinte de mot de passe. `ContextPasswordResetIdentity` répartit les appels entre `bo` et `app`, refuse les doublons et ne résout aucun compte dans un contexte absent. Il ne dépend pas de Users pour une installation BO seule. Un test unitaire couvre cette isolation. **Les implémentations Admins/Users, l'orchestration transactionnelle, les politiques de mot de passe et les endpoints restent à réaliser**. Les changements de mot de passe devront être persistés sur la même connexion et dans la même transaction que la consommation du jeton et la révocation des sessions. CI à confirmer.
+
+### Raccordement des propriétaires de comptes
+
+`AuthBundle` injecte les services marqués `symsvel.auth.password_reset_identity` dans `ContextPasswordResetIdentity`. Le module Admins fournit désormais un adaptateur BO DBAL, sans imposer Users dans les installations BO seules. L'adaptateur App et l'orchestration transactionnelle restent à réaliser. CI à confirmer.
