@@ -291,3 +291,7 @@ Le registre Mails assure la sélection de langue, la validation des variables et
 Depuis l'ajout de la dépendance `symsvel-framework/module-mails:dev-dev`, le dépôt Auth doit pouvoir récupérer Mails sur GitHub privé. Les deux jobs du workflow `.github/workflows/qa.yml` (tests et matrice PostgreSQL/MySQL/MariaDB) reprennent le mécanisme déjà utilisé dans la CI Mails : lecture du secret `SYMSVEL_READ_TOKEN`, génération temporaire de `COMPOSER_AUTH` avec `github-oauth.github.com`, puis `composer install --prefer-dist`. Aucun jeton n'est versionné ni inscrit dans `composer.json`.
 
 Le secret doit être accessible au dépôt Auth et autorisé à lire `Symsvel-Framework/symsvel-module-mails` ainsi que ses dépendances privées éventuelles. Une absence du secret fait échouer explicitement l'étape d'installation. La CI doit confirmer le correctif et les CT restent nécessaires.
+
+### Résolution des dépendances privées transitives
+
+Composer ne reprend pas les entrées `repositories` des paquets dépendants. Auth doit donc déclarer dans son propre `composer.json` les dépôts VCS de `symsvel-framework/module-mails` **et** de `symsvel-framework/module-settings` : Mails exige Settings en `dev-dev`. Le jeton CI donne accès aux dépôts privés, mais ne remplace pas leur déclaration dans le projet racine. La CI doit confirmer cette résolution avant validation.
