@@ -22,6 +22,7 @@ use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
+use SymSvel\Module\Auth\Token\DbalEmailVerificationStore;
 use SymSvel\Module\Auth\Token\TokenIssuer;
 use SymSvel\Module\Auth\Token\TokenLogout;
 use SymSvel\Module\Auth\Token\TokenRotation;
@@ -52,6 +53,10 @@ final class AuthBundleServicesTest extends TestCase
 
         self::assertSame(DbalTokenStore::class, (string) $builder->getAlias(TokenStore::class));
         self::assertSame(DbalTokenStore::class, (string) $builder->getAlias(AccessTokenLookup::class));
+
+        $confirmationConnection = $builder->getDefinition(DbalEmailVerificationStore::class)->getArgument('$connection');
+        self::assertInstanceOf(Reference::class, $confirmationConnection);
+        self::assertSame('doctrine.dbal.default_connection', (string) $confirmationConnection);
 
         $connection = $builder->getDefinition(DbalTokenStore::class)->getArgument('$connection');
         self::assertInstanceOf(Reference::class, $connection);
