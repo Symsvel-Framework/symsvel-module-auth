@@ -451,3 +451,13 @@ La migration `Migration/Version20261115000504.php` crée `symsvel_auth_email_ver
 Tests : `EmailVerificationCompletionTest` vérifie succès, mauvais contexte, rejeu, rollback pour changement d'adresse et refus d'un compte désactivé. `AuthBundleServicesTest` vérifie les définitions de services. Les adaptateurs réels sont testés dans les dépôts propriétaires.
 
 **Périmètre restant :** génération et expédition du mail, construction de l'URL depuis Settings, anti-abus, endpoints et écrans. Aucun endpoint public nouveau n'est activé ; les comptes non vérifiés restent inéligibles à la récupération de mot de passe. CI de cette passe et crash-tests locaux à confirmer.
+
+## Préparation de l'envoi des confirmations e-mail (15/11/2026)
+
+Auth déclare désormais deux paramètres URL supplémentaires dans Settings : `auth.bo_verify_email_url` et `auth.app_verify_email_url`. Ils sont privés, facultatifs pendant le Setup et utilisent le type natif `url`. Le résolveur `EmailVerificationUrlResolver` est enregistré dans `AuthBundle` et accepte uniquement une URL HTTPS serveur avec hôte, sans utilisateur/mot de passe, query string ni fragment. Une URL absente ou dangereuse entraîne un refus ; aucune origine n'est déduite du navigateur ou d'un header HTTP.
+
+`AuthMailTemplateProvider` déclare désormais les quatre modèles transactionnels : récupération de mot de passe et confirmation d'adresse, chacun en contexte BO ou App, avec variantes FR et EN. Les modèles de confirmation utilisent la variable `verificationUrl` et possèdent chacun un sujet, un contenu texte et un contenu HTML via Twig. Les fichiers sont référencés par le registre Mails existant, sans ajout d'un second moteur de rendu.
+
+Les tests des définitions Settings, du résolveur, du registre de modèles et du câblage Symfony ont été actualisés. Les valeurs ne sont pas publiques et n'imposent rien à une installation BO sans App.
+
+**Limite volontaire de cette passe :** aucun service d'expédition n'est encore exposé. Il devra demander l'adresse courante directement au module propriétaire, appliquer une limitation de confirmation indépendante du reset et envoyer seulement à cette adresse. Aucun endpoint HTTP n'a été ajouté. La CI des commits et les crash-tests locaux restent à confirmer.
