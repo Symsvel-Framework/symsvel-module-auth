@@ -22,6 +22,7 @@ use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetCompletion;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
+use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
@@ -69,6 +70,9 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.identity_provider'));
         $builder->register(ContextPasswordResetIdentity::class, ContextPasswordResetIdentity::class)
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.password_reset_identity'));
+        $builder->register(PasswordResetLimiter::class, PasswordResetLimiter::class)
+            ->setAutowired(true)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(PasswordResetCompletion::class, PasswordResetCompletion::class)
             ->setAutowired(true)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
