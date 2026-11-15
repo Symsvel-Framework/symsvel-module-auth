@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SymSvel\Module\Auth;
 
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use SymSvel\Module\Auth\Controller\BoLoginController;
 use SymSvel\Module\Auth\Controller\BoRefreshController;
 use SymSvel\Module\Auth\Controller\BoLogoutController;
@@ -43,7 +44,9 @@ final class AuthBundle extends AbstractBundle
         $builder->register(BoSessionLogout::class, BoSessionLogout::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
 
-        $builder->register(ContextIdentityProvider::class, ContextIdentityProvider::class)->setAutowired(true);
+        $builder->register(ContextIdentityProvider::class, ContextIdentityProvider::class)
+            ->setAutowired(true)
+            ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.identity_provider'));
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
