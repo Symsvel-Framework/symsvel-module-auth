@@ -23,6 +23,13 @@ final class ContextEmailVerificationIdentity
         }
     }
 
+    public function pendingEmail(TokenSubject $subject): ?string
+    {
+        $email = ($this->providers[$subject->context] ?? null)?->pendingVerificationEmail($subject);
+
+        return is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL) !== false ? $email : null;
+    }
+
     public function confirm(TokenSubject $subject, string $emailHash, \DateTimeImmutable $now): bool
     {
         if (!preg_match('/^[a-f0-9]{64}$/D', $emailHash)) {
