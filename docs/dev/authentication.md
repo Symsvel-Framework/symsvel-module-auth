@@ -303,3 +303,7 @@ Le dépôt Settings est désormais découvert par Composer, mais sa branche `dev
 ### Test de rendu des messages natifs
 
 Un test d'intégration légère construit le registre Mails avec le provider Auth et le chargeur Twig sur le répertoire de templates Auth. Il vérifie le rendu des deux contextes en français et anglais, l'échappement HTML des liens et leur conservation dans la partie texte. Ce test ne remplace pas la vérification du namespace Twig `@Auth` dans le conteneur Symfony réel, ni un essai SMTP via Mailpit. CI à confirmer.
+
+### Namespace Twig Auth dans Symfony
+
+`AuthBundle::prependExtension()` déclare explicitement le dossier `back/templates` auprès de Twig sous le namespace `Auth`. Les chemins des modèles `@Auth/mail/password-reset/{fr,en}/...` ne dépendent donc pas d'une découverte implicite des templates du bundle. Cette déclaration reste dans le module Auth ; aucune configuration Twig globale du squelette Back n'est nécessaire. Le test de rendu autonome est vert ; la compilation du conteneur Symfony et le rendu dans une installation complète doivent encore être validés par CI d'intégration ou crash-test local.
