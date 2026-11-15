@@ -6,7 +6,8 @@
     },
     "tables": [
         "symsvel_auth_access_tokens",
-        "symsvel_auth_refresh_tokens"
+        "symsvel_auth_refresh_tokens",
+        "symsvel_auth_password_reset_tokens"
     ],
     "components": {
         "back": "back"
