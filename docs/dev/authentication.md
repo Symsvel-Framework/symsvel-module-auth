@@ -275,3 +275,7 @@ Le contrôleur est couvert pour la validation d'entrée ; la rotation DBAL est c
 `Migration/Version20200101000500.php` fournit la migration initiale des tables `symsvel_auth_access_tokens` et `symsvel_auth_refresh_tokens`. Son `up(Schema)` applique `AuthTokenSchema::apply()` ; son `down(Schema)` supprime les deux tables. Le Tooling compile cette source avec les migrations des autres modules et traduit le diff Schema selon le SGBD choisi au Setup. La migration est nécessaire avant tout appel à `/apibo/auth/login`.
 
 Validation restante : CI et crash-tests locaux PostgreSQL, MySQL, MariaDB et SQLite. Les mentions historiques ci-dessus indiquant que la migration est absente ou non branchée sont désormais obsolètes.
+
+### Compatibilité avec l'extraction des migrations (15/11/2026)
+
+Le compilateur Tooling extrait uniquement les corps de `up()` et `down()` et ne transporte pas les imports `use` de la migration source. L'appel à `AuthTokenSchema::apply()` doit donc utiliser le nom de classe entièrement qualifié `\SymSvel\Module\Auth\Schema\AuthTokenSchema::apply($schema)` pour rester résoluble dans le fichier `DoctrineMigrations` généré. Cette correction vise le crash-test MySQL interrompu sur `Version20200101000500` ; l'exception initiale n'a pas été conservée par le Setup et la cause doit encore être confirmée par un nouveau CT après récupération contrôlée. Validation CI et CT requises.
