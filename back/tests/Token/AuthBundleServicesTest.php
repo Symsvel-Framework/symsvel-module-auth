@@ -13,6 +13,8 @@ use SymSvel\Module\Auth\AuthBundle;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
+use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
+use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
@@ -35,6 +37,11 @@ final class AuthBundleServicesTest extends TestCase
         // needed to inspect the Symfony service definitions.
         $configurator = (new \ReflectionClass(ContainerConfigurator::class))->newInstanceWithoutConstructor();
         (new AuthBundle())->loadExtension([], $configurator, $builder);
+
+        self::assertTrue($builder->hasDefinition(AuthSettingDefinitionProvider::class));
+        self::assertArrayHasKey('symsvel.settings.definition_provider', $builder->getDefinition(AuthSettingDefinitionProvider::class)->getTags());
+        self::assertTrue($builder->hasDefinition(PasswordResetUrlResolver::class));
+        self::assertTrue($builder->getDefinition(PasswordResetUrlResolver::class)->isAutowired());
 
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PasswordPrincipal::class));
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PrincipalStatus::class));
