@@ -23,6 +23,7 @@ use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
+use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenIssuer;
@@ -48,6 +49,9 @@ final class AuthBundle extends AbstractBundle
 
         // Reuse the same DBAL connection as the host application.
         $builder->register(DbalTokenStore::class, DbalTokenStore::class)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+
+        $builder->register(DbalPasswordResetStore::class, DbalPasswordResetStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
 
         $builder->setAlias(TokenStore::class, DbalTokenStore::class);
