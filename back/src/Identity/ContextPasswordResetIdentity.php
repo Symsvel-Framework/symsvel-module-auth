@@ -31,6 +31,17 @@ final class ContextPasswordResetIdentity
         return $subject?->context === $context ? $subject : null;
     }
 
+    /** Only the owner of the matching context may disclose a verified mailbox. */
+    public function recoveryEmail(TokenSubject $subject): ?string
+    {
+        $email = ($this->providers[$subject->context] ?? null)?->recoveryEmail($subject);
+        if (!is_string($email) || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return null;
+        }
+
+        return $email;
+    }
+
     public function replace(TokenSubject $subject, string $newPasswordHash): bool
     {
         return ($this->providers[$subject->context] ?? null)?->replacePassword($subject, $newPasswordHash) ?? false;
