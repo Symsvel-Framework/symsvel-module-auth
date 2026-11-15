@@ -19,7 +19,7 @@ final class AuthMailRenderingTest extends TestCase
         $loader->addPath(__DIR__.'/../../templates', 'Auth');
         $renderer = new RegisteredMailRenderer(
             new MailTemplateRegistry([new AuthMailTemplateProvider()]),
-            new Environment($loader, ['autoescape' => 'html']),
+            new Environment($loader, ['autoescape' => 'name']),
         );
         foreach (['bo', 'app'] as $context) {
             foreach (['fr', 'en'] as $locale) {
