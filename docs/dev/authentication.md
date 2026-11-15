@@ -441,3 +441,13 @@ Conformément à la décision de vérification obligatoire des adresses, Auth fo
 La migration `Migration/Version20261115000504.php` crée `symsvel_auth_email_verification_tokens` par Doctrine Schema. La table figure dans `module.json`, le store est enregistré dans `AuthBundle` et les tests SQLite couvrent stockage, contexte, rejeu, expiration, validation des entrées et rollback. Le test de composition vérifie le partage DBAL.
 
 **Reste à développer :** la finalisation transactionnelle côté Admins/Users avec vérification de l'empreinte de l'adresse actuelle, l'envoi du mail de confirmation, sa page et son URL fiable, l'anti-abus de confirmation, les routes HTTP et la purge via CLI/Tooling. Un changement d'adresse devra invalider son état vérifié. Aucun compte n'est automatiquement vérifié ; la récupération de mot de passe reste interdite pour les adresses non confirmées. CI et crash-tests multi-SGBD de cette passe à confirmer.
+
+## Confirmation transactionnelle des adresses e-mail (15/11/2026)
+
+`EmailVerificationCompletion` consomme un jeton à usage unique via `DbalEmailVerificationStore` et appelle l'adaptateur du compte propriétaire au sein d'une **même transaction DBAL**. `ContextEmailVerificationIdentity` route exclusivement selon le contexte `bo` ou `app` et refuse les fournisseurs dupliqués ainsi que les empreintes invalides. Une confirmation impossible (compte supprimé/désactivé, adresse modifiée, compte déjà vérifié) déclenche un rollback : le jeton n'est pas perdu, puis expire naturellement. Les erreurs DBAL ne sont pas converties en succès.
+
+`AuthBundle` enregistre le routeur par tag `symsvel.auth.email_verification_identity` et le service de finalisation avec la connexion Doctrine partagée. Les modules Admins et Users implémentent le contrat `EmailVerificationIdentity` sans dépendance d'Auth envers leurs tables.
+
+Tests : `EmailVerificationCompletionTest` vérifie succès, mauvais contexte, rejeu, rollback pour changement d'adresse et refus d'un compte désactivé. `AuthBundleServicesTest` vérifie les définitions de services. Les adaptateurs réels sont testés dans les dépôts propriétaires.
+
+**Périmètre restant :** génération et expédition du mail, construction de l'URL depuis Settings, anti-abus, endpoints et écrans. Aucun endpoint public nouveau n'est activé ; les comptes non vérifiés restent inéligibles à la récupération de mot de passe. CI de cette passe et crash-tests locaux à confirmer.
