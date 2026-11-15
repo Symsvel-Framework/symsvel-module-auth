@@ -331,3 +331,7 @@ La migration Schema `Version20200101000502` ajoute `symsvel_auth_password_reset_
 ### Correction syntaxique de l'orchestrateur
 
 Correction de la parenthèse fermante du contrôle `in_array()` dans `PasswordResetCompletion::complete()` et de l'indentation du callback transactionnel. La CI précédente échouait avant exécution des deux tests de complétion (`ParseError`, ligne 28). Aucun changement fonctionnel attendu ; nouvelle CI à confirmer.
+
+### Renforcement du test de persistance (15/11/2026)
+
+Le test `PasswordResetCompletionTest` utilise désormais une table SQLite `test_reset_accounts` et un provider DBAL plutôt qu'une propriété PHP simulant le stockage. Il vérifie la persistance réelle du hash Argon2id, le marquage du jeton et la révocation des deux catégories de sessions. Le scénario d'échec compare l'empreinte avant/après rollback, puis réessaie le même jeton. Ce test ne remplace pas les crash-tests multibase et de concurrence ; CI de cette passe à confirmer.
