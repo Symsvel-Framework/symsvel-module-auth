@@ -478,3 +478,6 @@ Le contrôleur est enregistré avec `controller.service_arguments` dans `AuthBun
 
 **Le parcours n'est pas encore opérationnel de bout en bout :** le déclenchement public des e-mails reste fermé tant que la résolution d'IP (proxys de confiance) et les garanties d'anti-énumération HTTP ne sont pas validées. La page Svelte BO de confirmation n'est pas encore ajoutée. Ce contrôleur est un point d'entrée HTTP sensible : vérifier la CI, la découverte des routes dans le projet assemblé et les crash-tests locaux avant de considérer le chantier terminé.
 
+## Ajustement du test HTTP Cache-Control (15/11/2026)
+
+Symfony HttpFoundation peut compléter `Cache-Control: no-store` par la directive `private`. Le test de confirmation BO vérifie désormais la présence de la directive de sécurité `no-store` via `hasCacheControlDirective('no-store')`, plutôt que de comparer l'en-tête entier à une chaîne exacte. Le comportement de l'endpoint reste inchangé ; il interdit toujours le stockage de la réponse. CI de ce correctif à confirmer.
