@@ -21,6 +21,7 @@ use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetCompletion;
+use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
@@ -90,6 +91,7 @@ final class AuthBundle extends AbstractBundle
             AccessTokenVerifier::class,
             AuthenticatedTokenResolver::class,
             PasswordLogin::class,
+            PasswordResetDispatch::class,
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }
