@@ -33,6 +33,14 @@ use SymSvel\Module\Auth\Token\TokenStore;
 
 final class AuthBundle extends AbstractBundle
 {
+    public function prependExtension(ContainerConfigurator $container, ContainerBuilder $builder): void
+    {
+        // Auth owns its transactional templates; expose them under @Auth.
+        $container->extension('twig', [
+            'paths' => [dirname(__DIR__).'/templates' => 'Auth'],
+        ]);
+    }
+
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
         $builder->register(AuthMailTemplateProvider::class, AuthMailTemplateProvider::class)
