@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
 use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
+use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
@@ -63,6 +64,8 @@ final class AuthBundle extends AbstractBundle
         $builder->register(ContextIdentityProvider::class, ContextIdentityProvider::class)
             ->setAutowired(true)
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.identity_provider'));
+        $builder->register(ContextPasswordResetIdentity::class, ContextPasswordResetIdentity::class)
+            ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.password_reset_identity'));
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
