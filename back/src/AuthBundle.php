@@ -17,6 +17,8 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
 use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
+use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
+use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
@@ -79,6 +81,11 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.identity_provider'));
         $builder->register(ContextPasswordResetIdentity::class, ContextPasswordResetIdentity::class)
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.password_reset_identity'));
+        $builder->register(ContextEmailVerificationIdentity::class, ContextEmailVerificationIdentity::class)
+            ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.email_verification_identity'));
+        $builder->register(EmailVerificationCompletion::class, EmailVerificationCompletion::class)
+            ->setAutowired(true)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(PasswordResetLimiter::class, PasswordResetLimiter::class)
             ->setAutowired(true)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
