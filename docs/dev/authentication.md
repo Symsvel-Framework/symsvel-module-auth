@@ -299,3 +299,7 @@ Composer ne reprend pas les entrées `repositories` des paquets dépendants. Aut
 ### Stabilité Composer de Settings
 
 Le dépôt Settings est désormais découvert par Composer, mais sa branche `dev-dev` n'est pas admissible comme simple dépendance transitive avec la stabilité minimale implicite `stable`. Auth déclare donc explicitement `symsvel-framework/module-settings:dev-dev` dans ses dépendances racine, en complément de Mails. Cette autorisation ciblée n'abaisse pas `minimum-stability` pour les autres paquets. Elle sera réévaluée quand une release de Settings contiendra le contrat de définitions requis par Mails. Validation CI encore attendue.
+
+### Test de rendu des messages natifs
+
+Un test d'intégration légère construit le registre Mails avec le provider Auth et le chargeur Twig sur le répertoire de templates Auth. Il vérifie le rendu des deux contextes en français et anglais, l'échappement HTML des liens et leur conservation dans la partie texte. Ce test ne remplace pas la vérification du namespace Twig `@Auth` dans le conteneur Symfony réel, ni un essai SMTP via Mailpit. CI à confirmer.
