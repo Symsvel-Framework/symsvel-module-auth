@@ -9,7 +9,13 @@ jobs:
         with:
           php-version: '8.4'
           extensions: pdo_sqlite
-      - run: composer install --no-interaction --prefer-dist
+      - name: Install private Composer dependencies
+        env:
+          SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}
+        run: |
+          test -n "$SYMSVEL_READ_TOKEN"
+          export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
+          composer install --no-interaction --prefer-dist --no-progress
       - run: composer qa
 
   database-matrix:
@@ -51,7 +57,13 @@ jobs:
         with:
           php-version: '8.4'
           extensions: pdo_pgsql, pdo_mysql, pdo_sqlite
-      - run: composer install --no-interaction --prefer-dist
+      - name: Install private Composer dependencies
+        env:
+          SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}
+        run: |
+          test -n "$SYMSVEL_READ_TOKEN"
+          export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
+          composer install --no-interaction --prefer-dist --no-progress
       - name: Wait for database
         env:
           DATABASE_URL: ${{ matrix.url }}
