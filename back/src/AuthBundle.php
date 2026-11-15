@@ -19,6 +19,7 @@ use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
+use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
@@ -115,6 +116,7 @@ final class AuthBundle extends AbstractBundle
             AuthenticatedTokenResolver::class,
             PasswordLogin::class,
             PasswordResetDispatch::class,
+            EmailVerificationDispatch::class,
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }
