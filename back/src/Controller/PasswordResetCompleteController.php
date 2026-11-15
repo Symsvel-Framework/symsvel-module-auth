@@ -22,12 +22,6 @@ final readonly class PasswordResetCompleteController
         return $this->complete($request, 'bo');
     }
 
-    #[Route('/api/auth/password-reset/complete', name: 'symsvel_auth_app_reset_complete', methods: ['POST'], format: 'json')]
-    public function app(Request $request): JsonResponse
-    {
-        return $this->complete($request, 'app');
-    }
-
     private function complete(Request $request, string $context): JsonResponse
     {
         if (!str_starts_with(strtolower($request->headers->get('Content-Type', '')), 'application/json')) {
