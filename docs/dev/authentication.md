@@ -343,3 +343,7 @@ Le test `PasswordResetCompletionTest` utilise désormais une table SQLite `test_
 ### Préparation à la contention du jeton de récupération (15/11/2026)
 
 `DbalPasswordResetStore::consume()` exécute désormais son `UPDATE` conditionnel avant de lire l'identifiant du compte. L'écriture obtient le verrou avant toute lecture dans la transaction, notamment pour éviter une conversion de transaction de lecture en écriture sous SQLite. L'identifiant n'est consulté qu'après une modification unique réussie. La transaction externe de `PasswordResetCompletion` conserve le rollback global. **La concurrence réelle entre deux connexions reste à valider par un test de contention dédié** ; CI de cette correction à confirmer.
+
+### Test de contention du jeton de récupération (15/11/2026)
+
+`PasswordResetLockContentionTest` utilise deux connexions DBAL distinctes, la même URL de base de test dédiée que la matrice et un SQLite fichier temporaire par défaut. La connexion A consomme le jeton dans une transaction non validée ; B doit échouer sous un délai de verrou borné (SQLite `busy_timeout=0`, PostgreSQL `lock_timeout=200ms`, MySQL/MariaDB `innodb_lock_wait_timeout=1`). Après le commit de A, B doit constater un jeton déjà consommé et la base doit contenir exactement une consommation. Ce test vérifie la contention au niveau du stockage ; il ne remplace pas un crash-test HTTP de deux réinitialisations complètes. CI de cette passe à confirmer.
