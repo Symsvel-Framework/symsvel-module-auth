@@ -351,3 +351,9 @@ Le test `PasswordResetCompletionTest` utilise désormais une table SQLite `test_
 ### Revue des routes de récupération (15/11/2026)
 
 La revue du module confirme les conventions `/apibo/auth/*` pour le BO, les providers de récupération par contexte et les templates Mails natifs `auth.bo.password_reset` / `auth.app.password_reset`. Les endpoints de demande et de finalisation de récupération ne sont pas encore exposés : leur contrat et l'envoi doivent être raccordés aux services Mails existants avant ajout. Correction associée : `ContextPasswordResetIdentity` traite désormais un contexte non enregistré par `null`/`false` sans accès à une clé de tableau absente ; le test existant couvre le cas App absent. CI à confirmer.
+
+### Endpoint de finalisation BO (15/11/2026)
+
+`POST /apibo/auth/password-reset/complete` accepte un corps JSON `{ "token": "...", "password": "..." }`, avec secret de récupération de 43 caractères base64url et mot de passe entre 12 et 1024 octets. Le contrôleur délègue à `PasswordResetCompletion` et renvoie `status=completed` en cas de succès, `invalid_reset_token` pour un jeton invalide/expiré, `invalid_request` pour une entrée malformée et `unsupported_media_type` si JSON absent. Les réponses désactivent le cache. Tests unitaires du contrôleur ajoutés ; CI à confirmer.
+
+**Périmètre volontaire :** aucune route App n'est encore déclarée pour ne pas exposer de route App dans une installation BO seule. Le déclenchement de récupération et l'envoi via `RegisteredMailRenderer` et `MailSender` restent à raccorder, avec configuration de l'expéditeur, URL publique de retour et limitation des demandes. Ne pas considérer le parcours utilisable de bout en bout à ce stade.
