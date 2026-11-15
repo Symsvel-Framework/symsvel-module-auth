@@ -48,6 +48,22 @@ final class PasswordResetLimiterTest extends TestCase
         }
     }
 
+    public function testVerificationQuotaIsIndependentFromPasswordResetQuota(): void
+    {
+        [$limiter, $db] = $this->fixture();
+        $now = new \DateTimeImmutable('2026-11-15T12:00:00+00:00');
+
+        self::assertTrue($limiter->allow('bo', 'admin@example.test', '192.0.2.10', $now));
+        self::assertTrue($limiter->allowVerification('bo', 'admin@example.test', '192.0.2.10', $now));
+        self::assertFalse($limiter->allowVerification('bo', 'admin@example.test', '192.0.2.11', $now));
+        self::assertFalse($limiter->allow('bo', 'admin@example.test', '192.0.2.11', $now));
+        self::assertSame(4, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_reset_limits'));
+        self::assertSame(
+            ['identifier', 'ip', 'verify_id', 'verify_ip'],
+            array_column($db->fetchAllAssociative('SELECT scope FROM symsvel_auth_reset_limits ORDER BY scope'), 'scope'),
+        );
+    }
+
     private function fixture(): array
     {
         if (!extension_loaded('pdo_sqlite')) {
