@@ -35,7 +35,7 @@ final readonly class PasswordResetLimiter
         // occupied the whole attempt is denied, including unknown accounts.
         try {
             return $this->connection->transactional(function () use ($context, $identifier, $clientIp, $now): bool {
-                $this->reserve($context, 'identifier', mb_strtolower(trim($identifier), 'UTF-8'), 300, $now);
+                $this->reserve($context, 'identifier', strtolower(trim($identifier)), 300, $now);
                 $this->reserve($context, 'ip', $clientIp, 10, $now);
 
                 return true;
