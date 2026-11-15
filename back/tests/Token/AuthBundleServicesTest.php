@@ -12,6 +12,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use SymSvel\Module\Auth\AuthBundle;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
+use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
@@ -52,13 +53,13 @@ final class AuthBundleServicesTest extends TestCase
         foreach ([
             PasswordLogin::class,
             PasswordResetLimiter::class,
+            PasswordResetDispatch::class,
             AuthenticatedTokenResolver::class,
             TokenIssuer::class,
             TokenRotation::class,
             TokenLogout::class,
             TokenSessionRevoker::class,
             AccessTokenVerifier::class,
-            PasswordResetLimiter::class,
         ] as $service) {
             self::assertTrue($builder->hasDefinition($service), $service.' must be registered.');
             self::assertTrue($builder->getDefinition($service)->isAutowired());
