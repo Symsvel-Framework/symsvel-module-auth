@@ -361,3 +361,11 @@ La revue du module confirme les conventions `/apibo/auth/*` pour le BO, les prov
 ### Revue du déclenchement de récupération et du transport (15/11/2026)
 
 Le module Mails expose `RegisteredMailRenderer::render()` et `MailSender::send()`. Le second exige explicitement l'adresse et le nom de l'expéditeur ; `MailsSettingDefinitionProvider` déclare `mails.sender_email` et `mails.sender_name`, mais leur lecture effective n'est pas encore raccordée. Le transport utilise `MAILER_DSN`. Aucun endpoint public de demande de récupération n'est donc ajouté avant raccordement de cette configuration, construction sûre de l'URL de retour et limitation des tentatives. Un test HTTP supplémentaire vérifie le succès de la finalisation BO, le hash du nouveau mot de passe et le rejet d'un second appel avec le même jeton. CI à confirmer.
+
+## Adresse de récupération vérifiée : contrat des propriétaires (15/11/2026)
+
+`PasswordResetIdentity::recoveryEmail(TokenSubject): ?string` est désormais le seul contrat pour obtenir la boîte de récupération depuis le propriétaire de l'identité (`Admins` pour `bo`, `Users` pour `app`). Le propriétaire doit vérifier que le compte existe, est actif et que cette boîte est autorisée et vérifiée avant de la renvoyer. Une adresse fournie dans la requête HTTP ne doit **jamais** être utilisée directement comme destinataire.
+
+`ContextPasswordResetIdentity::recoveryEmail()` route la demande exclusivement vers le fournisseur du contexte demandé et refuse les adresses absentes ou syntaxiquement invalides. Les tests couvrent l'isolation BO/App, les comptes non éligibles, les adresses invalides et les fournisseurs dupliqués. Les doubles `PasswordResetIdentity` existants ont été mis à jour.
+
+**Limites :** le contrôle de syntaxe n'est pas une vérification de propriété de l'adresse. Les adaptateurs réels Admins/Users ne sont pas encore raccordés. Il n'y a toujours pas d'endpoint public de demande de récupération, ni d'envoi ni d'anti-abus. La route de finalisation BO existante n'est pas une preuve d'un parcours utilisable. Les CI et crash-tests locaux de cette passe restent à confirmer.
