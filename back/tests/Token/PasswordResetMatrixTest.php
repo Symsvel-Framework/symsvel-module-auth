@@ -72,6 +72,7 @@ final class PasswordResetMatrixTest extends TestCase
             public function __construct(private Connection $db) {}
             public function authContext(): string { return 'bo'; }
             public function findResetSubject(string $identifier): ?TokenSubject { return null; }
+            public function recoveryEmail(TokenSubject $subject): ?string { return $subject->context === 'bo' ? 'admin@example.test' : null; }
             public function replacePassword(TokenSubject $subject, string $newPasswordHash): bool
             {
                 if (!$this->allow || $subject->context !== 'bo') { return false; }
