@@ -307,3 +307,7 @@ Un test d'intégration légère construit le registre Mails avec le provider Aut
 ### Namespace Twig Auth dans Symfony
 
 `AuthBundle::prependExtension()` déclare explicitement le dossier `back/templates` auprès de Twig sous le namespace `Auth`. Les chemins des modèles `@Auth/mail/password-reset/{fr,en}/...` ne dépendent donc pas d'une découverte implicite des templates du bundle. Cette déclaration reste dans le module Auth ; aucune configuration Twig globale du squelette Back n'est nécessaire. Le test de rendu autonome est vert ; la compilation du conteneur Symfony et le rendu dans une installation complète doivent encore être validés par CI d'intégration ou crash-test local.
+
+### Primitive de jeton de récupération
+
+`PasswordResetToken` génère un secret opaque de 256 bits, encodé en base64url (43 caractères), son empreinte SHA-256 et une échéance (30 minutes par défaut, paramétrable). La primitive refuse les contextes autres que `bo` et `app`, les durées non positives et les secrets malformés. Elle est distincte de `TokenFactory` et des familles de sessions. **Elle ne stocke rien et n'assure pas à elle seule l'usage unique** : il reste à concevoir le dépôt DBAL avec consommation atomique, l'association au compte, la révocation et les contrôles anti-abus avant toute exposition HTTP. Tests unitaires ajoutés, CI à confirmer.
