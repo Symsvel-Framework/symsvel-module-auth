@@ -16,9 +16,11 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\RawMessage;
 use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
+use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetIdentity;
 use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Schema\PasswordResetSchema;
+use SymSvel\Module\Auth\Schema\PasswordResetLimitSchema;
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\TokenSubject;
 use SymSvel\Module\Mails\Mail\ConfiguredMailSender;
@@ -45,7 +47,7 @@ final class PasswordResetDispatchTest extends TestCase
             static function (RawMessage $mail) use (&$message): void { $message = $mail; },
         );
         $now = new \DateTimeImmutable('2026-11-15T12:00:00+00:00');
-        self::assertTrue($dispatch->dispatch('bo', 'known', 'fr', 'https://bo.example.test/reset', $now));
+        self::assertTrue($dispatch->dispatch('bo', 'known', 'fr', 'https://bo.example.test/reset', '192.0.2.10', $now));
         self::assertInstanceOf(Email::class, $message);
         self::assertSame('verified@example.test', $message->getTo()[0]->getAddress());
         self::assertSame('sender@example.test', $message->getFrom()[0]->getAddress());
@@ -61,9 +63,21 @@ final class PasswordResetDispatchTest extends TestCase
         [$dispatch, $db, $mailer] = $this->fixture(true);
         $mailer->expects(self::never())->method('send');
         self::assertFalse($dispatch->dispatch(
-            'bo', 'missing', 'fr', 'https://bo.example.test/reset', new \DateTimeImmutable(),
+            'bo', 'missing', 'fr', 'https://bo.example.test/reset', '192.0.2.10', new \DateTimeImmutable(),
         ));
         self::assertSame(0, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens'));
+        self::assertSame(2, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_reset_limits'));
+    }
+
+    public function testRateLimitPreventsRepeatedDelivery(): void
+    {
+        [$dispatch, $db, $mailer] = $this->fixture(true);
+        $mailer->expects(self::once())->method('send');
+        $now = new \DateTimeImmutable('2026-11-15T12:00:00+00:00');
+        self::assertTrue($dispatch->dispatch('bo', 'known', 'fr', 'https://bo.example.test/reset', '192.0.2.10', $now));
+        self::assertFalse($dispatch->dispatch('bo', 'known', 'fr', 'https://bo.example.test/reset', '192.0.2.11', $now));
+        self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens'));
+        self::assertSame(2, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_reset_limits'));
     }
 
     public function testRejectsUntrustedUrlBeforeIdentityLookup(): void
@@ -72,7 +86,7 @@ final class PasswordResetDispatchTest extends TestCase
         $mailer->expects(self::never())->method('send');
         foreach (['http://bo.example.test/reset', 'https://bo.example.test/reset?next=evil', 'https://user@bo.example.test/reset'] as $url) {
             try {
-                $dispatch->dispatch('bo', 'known', 'fr', $url, new \DateTimeImmutable());
+                $dispatch->dispatch('bo', 'known', 'fr', $url, '192.0.2.10', new \DateTimeImmutable());
                 self::fail('URL should be rejected.');
             } catch (\InvalidArgumentException) {
                 // Expected: no DB persistence or mail dispatch.
@@ -90,6 +104,7 @@ final class PasswordResetDispatchTest extends TestCase
         $db = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $schema = new Schema();
         PasswordResetSchema::apply($schema);
+        PasswordResetLimitSchema::apply($schema);
         foreach ($schema->toSql($db->getDatabasePlatform()) as $sql) {
             $db->executeStatement($sql);
         }
@@ -138,6 +153,7 @@ final class PasswordResetDispatchTest extends TestCase
 
         return [
             new PasswordResetDispatch(
+                new PasswordResetLimiter($db, 'test-secret-at-least-16-characters'),
                 new ContextPasswordResetIdentity([$owner]), new DbalPasswordResetStore($db),
                 $renderer, new ConfiguredMailSender(new MailSender($mailer), $settings),
             ),
