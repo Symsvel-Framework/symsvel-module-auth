@@ -14,5 +14,8 @@ interface PasswordResetIdentity extends ContextOwnedIdentity
 {
     public function findResetSubject(string $identifier): ?TokenSubject;
 
+    /** Return a verified recovery mailbox for an eligible account, never an arbitrary input address. */
+    public function recoveryEmail(TokenSubject $subject): ?string;
+
     public function replacePassword(TokenSubject $subject, string $newPasswordHash): bool;
 }
