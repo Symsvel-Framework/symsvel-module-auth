@@ -259,3 +259,9 @@ La CI doit encore valider ce changement. Ne pas ouvrir le dashboard ni conserver
 ## Régression SQLite de déconnexion liée
 
 `BoSessionLogoutTest` crée trois familles indépendantes, deux BO pour le même administrateur et une App. Il vérifie qu'un couple access/refresh provenant de deux familles distinctes est refusé, qu'un couple App est refusé par la route BO, que la révocation est idempotente et que la déconnexion d'une famille ne révoque pas les autres. Ce test n'établit pas encore la sûreté sous concurrence PostgreSQL/MySQL/MariaDB ni le transport navigateur.
+
+## Renouvellement BO
+
+`POST /apibo/auth/refresh` reçoit un JSON `{"refresh_token":"..."}`, sans access token requis. Il appelle `TokenRotation` dans le contexte strict `bo`, avec verrouillage/consommation du refresh et rotation de la famille. En succès (HTTP 200), il retourne les nouveaux `access_token`, `refresh_token`, `expires_at`, `refresh_expires_at` et `token_type: Bearer`. En cas de refresh invalide, expiré, rejoué ou d'un autre contexte, il retourne HTTP 401 ; entrée invalide HTTP 400 ; média incorrect HTTP 415. Réponses non cachables. Le refresh précédent ne doit jamais être réutilisé.
+
+Le contrôleur est couvert pour la validation d'entrée ; la rotation DBAL est couverte séparément. Le branchement Svelte, le transport HttpOnly/CSRF/CORS et les crash-tests inter-SGBD restent à valider avant usage en production.
