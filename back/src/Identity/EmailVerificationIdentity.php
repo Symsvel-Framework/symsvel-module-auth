@@ -9,5 +9,8 @@ use SymSvel\Module\Auth\Token\TokenSubject;
 /** Credential owner confirms only the mailbox presently assigned to its subject. */
 interface EmailVerificationIdentity extends ContextOwnedIdentity
 {
+    /** Address currently owned by an active account, only while unverified. */
+    public function pendingVerificationEmail(TokenSubject $subject): ?string;
+
     public function confirmEmail(TokenSubject $subject, string $emailHash, \DateTimeImmutable $now): bool;
 }
