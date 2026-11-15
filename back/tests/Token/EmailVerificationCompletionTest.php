@@ -79,6 +79,17 @@ final class EmailVerificationCompletionTest extends TestCase
         $owner = new class($db) implements EmailVerificationIdentity {
             public function __construct(private Connection $db) {}
             public function authContext(): string { return 'bo'; }
+            public function pendingVerificationEmail(TokenSubject $subject): ?string
+            {
+                if ($subject->context !== 'bo') {
+                    return null;
+                }
+                $email = $this->db->fetchOne(
+                    'SELECT email FROM test_accounts WHERE id = ? AND enabled = ? AND verified_at IS NULL',
+                    [$subject->id, true],
+                );
+                return is_string($email) ? $email : null;
+            }
             public function confirmEmail(TokenSubject $subject, string $emailHash, \DateTimeImmutable $now): bool
             {
                 if ($subject->context !== 'bo') {
