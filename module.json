@@ -1,7 +1,9 @@
 {
     "schema": 1,
     "name": "Auth",
-    "dependencies": {},
+    "dependencies": {
+        "mails": "*"
+    },
     "tables": [
         "symsvel_auth_access_tokens",
         "symsvel_auth_refresh_tokens"
