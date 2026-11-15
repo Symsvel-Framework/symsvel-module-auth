@@ -13,6 +13,7 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\DBAL\Tools\DsnParser;
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Schema\PasswordResetLimitSchema;
 
@@ -22,7 +23,24 @@ use SymSvel\Module\Auth\Schema\PasswordResetLimitSchema;
  */
 final class PasswordResetLimiterContentionTest extends TestCase
 {
-    public function testConcurrentRequestCannotReserveAnAlreadyLockedWindow(): void
+    /** @return iterable<string, array{string, string, string, string}> */
+    public static function competingRequests(): iterable
+    {
+        yield 'same identifier, different IPs' => [
+            'admin@example.test', '192.0.2.10', 'admin@example.test', '192.0.2.11',
+        ];
+        yield 'different identifiers, same IP' => [
+            'first@example.test', '192.0.2.10', 'second@example.test', '192.0.2.10',
+        ];
+    }
+
+    #[DataProvider('competingRequests')]
+    public function testConcurrentRequestCannotReserveAnAlreadyLockedWindow(
+        string $firstIdentifier,
+        string $firstIp,
+        string $secondIdentifier,
+        string $secondIp,
+    ): void
     {
         $url = getenv('SYMSVEL_AUTH_TEST_DATABASE_URL');
         if (!$url && !extension_loaded('pdo_sqlite')) {
@@ -73,18 +91,18 @@ final class PasswordResetLimiterContentionTest extends TestCase
 
             $first->beginTransaction();
             try {
-                self::assertTrue($limiterA->allow('bo', 'admin@example.test', '192.0.2.10', $now));
+                self::assertTrue($limiterA->allow('bo', $firstIdentifier, $firstIp, $now));
 
-                // B competes for the same identifier with a different IP while
-                // A holds its uncommitted unique key.
+                // B competes for either the same identifier or the same IP
+                // while A holds its uncommitted unique key.
                 $blocked = false;
                 try {
-                    $blocked = !$limiterB->allow('bo', 'admin@example.test', '192.0.2.11', $now);
+                    $blocked = !$limiterB->allow('bo', $secondIdentifier, $secondIp, $now);
                 } catch (DbalException) {
                     // A database lock timeout must never grant a reservation.
                     $blocked = true;
                 }
-                self::assertTrue($blocked, 'Concurrent requests must not both reserve the identifier window.');
+                self::assertTrue($blocked, 'Concurrent requests must not both reserve a shared rate limit window.');
                 $first->commit();
             } finally {
                 if ($first->isTransactionActive()) {
@@ -92,7 +110,7 @@ final class PasswordResetLimiterContentionTest extends TestCase
                 }
             }
 
-            self::assertFalse($limiterB->allow('bo', 'admin@example.test', '192.0.2.11', $now));
+            self::assertFalse($limiterB->allow('bo', $secondIdentifier, $secondIp, $now));
             self::assertSame(2, (int) $first->fetchOne('SELECT COUNT(*) FROM symsvel_auth_reset_limits'));
         } finally {
             if ($second instanceof Connection) {
