@@ -18,6 +18,7 @@ use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
+use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
@@ -34,6 +35,9 @@ final class AuthBundle extends AbstractBundle
 {
     public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
     {
+        $builder->register(AuthMailTemplateProvider::class, AuthMailTemplateProvider::class)
+            ->addTag('symsvel.mails.template_provider');
+
         // Reuse the same DBAL connection as the host application.
         $builder->register(DbalTokenStore::class, DbalTokenStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
