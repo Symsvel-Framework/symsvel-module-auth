@@ -18,6 +18,7 @@ use SymSvel\Module\Auth\Controller\BoSessionController;
 use SymSvel\Module\Auth\Controller\PasswordResetCompleteController;
 use SymSvel\Module\Auth\Controller\EmailVerificationCompleteController;
 use SymSvel\Module\Auth\Controller\AdminInvitationCompleteController;
+use SymSvel\Module\Auth\Controller\AppInvitationCompleteController;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -27,8 +28,11 @@ use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
 use SymSvel\Module\Auth\Identity\AdminInvitationOwners;
+use SymSvel\Module\Auth\Identity\AppInvitationOwners;
 use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
 use SymSvel\Module\Auth\Identity\AdminInvitationDispatch;
+use SymSvel\Module\Auth\Identity\AppInvitationCompletion;
+use SymSvel\Module\Auth\Identity\AppInvitationDispatch;
 use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
@@ -41,6 +45,7 @@ use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
 use SymSvel\Module\Auth\Service\AdminInvitationUrlResolver;
+use SymSvel\Module\Auth\Service\AppInvitationUrlResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
 use SymSvel\Module\Auth\Token\ContextSessionLogout;
@@ -49,6 +54,7 @@ use SymSvel\Module\Auth\Token\DbalTokenStore;
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\DbalEmailVerificationStore;
 use SymSvel\Module\Auth\Token\DbalAdminInvitationStore;
+use SymSvel\Module\Auth\Token\DbalAppInvitationStore;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenIssuer;
@@ -79,6 +85,8 @@ final class AuthBundle extends AbstractBundle
             ->setAutowired(true);
         $builder->register(AdminInvitationUrlResolver::class, AdminInvitationUrlResolver::class)
             ->setAutowired(true);
+        $builder->register(AppInvitationUrlResolver::class, AppInvitationUrlResolver::class)
+            ->setAutowired(true);
 
         // Reuse the same DBAL connection as the host application.
         $builder->register(DbalTokenStore::class, DbalTokenStore::class)
@@ -89,6 +97,8 @@ final class AuthBundle extends AbstractBundle
         $builder->register(DbalEmailVerificationStore::class, DbalEmailVerificationStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(DbalAdminInvitationStore::class, DbalAdminInvitationStore::class)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+        $builder->register(DbalAppInvitationStore::class, DbalAppInvitationStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
 
         $builder->setAlias(TokenStore::class, DbalTokenStore::class);
@@ -111,6 +121,11 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(AdminInvitationOwners::class, AdminInvitationOwners::class)
             ->setArgument('$owners', new TaggedIteratorArgument('symsvel.auth.admin_invitation_identity'));
+        $builder->register(AppInvitationOwners::class, AppInvitationOwners::class)
+            ->setArgument('$owners', new TaggedIteratorArgument('symsvel.auth.app_invitation_identity'));
+        $builder->register(AppInvitationCompletion::class, AppInvitationCompletion::class)
+            ->setAutowired(true)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(EmailVerificationCompletion::class, EmailVerificationCompletion::class)
             ->setAutowired(true)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
@@ -125,7 +140,7 @@ final class AuthBundle extends AbstractBundle
 
         $builder->register(TrustedBoOrigin::class, TrustedBoOrigin::class)->setAutowired(true);
 
-        foreach ([BoBrowserSessionController::class, BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
+        foreach ([BoBrowserSessionController::class, BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class, AppInvitationCompleteController::class] as $controller) {
             $builder->register($controller, $controller)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');
@@ -144,6 +159,7 @@ final class AuthBundle extends AbstractBundle
             PasswordResetDispatch::class,
             EmailVerificationDispatch::class,
             AdminInvitationDispatch::class,
+            AppInvitationDispatch::class,
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }
