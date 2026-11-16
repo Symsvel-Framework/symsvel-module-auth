@@ -513,3 +513,11 @@ La migration additive `Migration/Version20261116000505.php` définit la table pr
 `DbalAdminInvitationStore` utilise la connexion DBAL partagée et conserve uniquement l'empreinte SHA-256 du jeton et de l'adresse normalisée ; le jeton est lié à l'identifiant de l'administrateur. La consommation repose sur un `UPDATE` conditionnel atomique (non utilisé et non expiré), puis fournit l'identité et l'empreinte de l'adresse. Elle doit être appelée **dans la transaction d'activation** ; les tests SQLite contrôlent usage unique, expiration, invalidité et rollback de consommation. Enregistrement explicite de ce store dans `AuthBundle`.
 
 Il n'existe **toujours pas d'endpoint public ni de flux d'invitation fonctionnel** : à suivre, l'activation atomique de l'administrateur avec contrôle de son adresse actuelle et définition du premier mot de passe, puis l'envoi via Mails et les écrans BO. Les migrations multi-SGBD et crash-tests du projet assemblé ne sont pas encore validés pour cette nouvelle table.
+
+## Activation transactionnelle d'une invitation BO (16/11/2026)
+
+`AdminInvitationCompletion` consomme une invitation depuis `DbalAdminInvitationStore` puis demande à l'unique propriétaire BO d'activer le compte via `AdminInvitationIdentity`, sélectionné au moyen de `AdminInvitationOwners` et du tag `symsvel.auth.admin_invitation_identity`. Le traitement s'effectue dans **une même transaction DBAL** et retourne `false` en cas de jeton invalide, expiré, réutilisé, de mot de passe hors limites ou de refus du compte. Un refus d'activation entraîne un rollback de la consommation. Le mot de passe initial est haché en Argon2id.
+
+Le test `AdminInvitationCompletionTest` vérifie la liaison à l'adresse courante, l'activation atomique, l'impossibilité de réutiliser le jeton, ainsi que le rollback pour un compte désactivé ; `AuthBundleServicesTest` contrôle le câblage Symfony.
+
+**Non livré** : création/invitation d'un nouvel admin, émission du mail, endpoint HTTP et parcours Svelte. Aucun flux public n'est ouvert par cette étape. La CI et les CT multi-SGBD restent à valider.
