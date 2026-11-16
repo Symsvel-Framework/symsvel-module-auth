@@ -1,14 +1,20 @@
 name: QA
 on: [push, pull_request]
+
+# The Compose databases are shared by the two self-hosted runners.
+# Keep independent runs serialized while preserving the three-engine matrix.
+concurrency:
+  group: symsvel-auth-local-database-matrix
+  cancel-in-progress: false
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, symsvel]
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: pdo_sqlite
+      - name: Verify preinstalled PHP 8.4 and SQLite driver
+        run: |
+          php -v
+          php -r 'if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || !extension_loaded("pdo_sqlite")) { exit(1); }'
       - name: Install private Composer dependencies
         env:
           SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}
@@ -35,40 +41,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - engine: postgres
-            image: postgres:17
-            url: postgresql://symsvel_auth:symsvel_auth@127.0.0.1:5432/symsvel_auth
-          - engine: mysql
-            image: mysql:8.4
-            url: mysql://symsvel_auth:symsvel_auth@127.0.0.1:3306/symsvel_auth
-          - engine: mariadb
-            image: mariadb:11.4
-            url: mysql://symsvel_auth:symsvel_auth@127.0.0.1:3306/symsvel_auth
-    services:
-      database:
-        image: ${{ matrix.image }}
-        env:
-          POSTGRES_USER: symsvel_auth
-          POSTGRES_PASSWORD: symsvel_auth
-          POSTGRES_DB: symsvel_auth
-          MYSQL_USER: symsvel_auth
-          MYSQL_PASSWORD: symsvel_auth
-          MYSQL_DATABASE: symsvel_auth
-          MYSQL_ROOT_PASSWORD: symsvel_auth_root
-          MARIADB_USER: symsvel_auth
-          MARIADB_PASSWORD: symsvel_auth
-          MARIADB_DATABASE: symsvel_auth
-          MARIADB_ROOT_PASSWORD: symsvel_auth_root
-        ports:
-          - 5432:5432
-          - 3306:3306
+        engine: [postgres, mysql, mariadb]
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: pdo_pgsql, pdo_mysql, pdo_sqlite
+      - name: Verify preinstalled PHP 8.4 and database drivers
+        run: |
+          php -v
+          php -r 'if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || !extension_loaded("pdo_pgsql") || !extension_loaded("pdo_mysql") || !extension_loaded("pdo_sqlite")) { exit(1); }'
       - name: Install private Composer dependencies
         env:
           SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}
@@ -88,29 +67,33 @@ jobs:
           done
           export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
           composer install --no-interaction --prefer-dist --no-progress
-      - name: Wait for database
+      - name: Reset dedicated Auth database and execute DBAL matrix
         env:
-          DATABASE_URL: ${{ matrix.url }}
+          ENGINE: ${{ matrix.engine }}
+          SYMSVEL_CI_POSTGRES_PASSWORD: ${{ secrets.SYMSVEL_CI_POSTGRES_PASSWORD }}
         run: |
-          php -r '
-          require "vendor/autoload.php";
-          $lastError = null;
-          for ($i = 0; $i < 20; ++$i) {
-              try {
-                  \Doctrine\DBAL\DriverManager::getConnection((new \Doctrine\DBAL\Tools\DsnParser(["postgresql" => "pdo_pgsql", "mysql" => "pdo_mysql", "mariadb" => "pdo_mysql"]))->parse(getenv("DATABASE_URL")))->executeQuery("SELECT 1")->fetchOne();
-                  exit(0);
-              } catch (\Throwable $e) {
-                  $lastError = $e;
-                  sleep(1);
-              }
-          }
-          fwrite(STDERR, "Database did not become ready: ".($lastError?->getMessage() ?? "unknown error")."\n");
-          exit(1);
-          '
-      - name: DBAL integration and lock contention
-        env:
-          SYMSVEL_AUTH_TEST_DATABASE_URL: ${{ matrix.url }}
-        run: vendor/bin/phpunit -c back/phpunit.xml.dist back/tests/Token/DbalTokenStoreMatrixTest.php back/tests/Token/RefreshLockContentionTest.php back/tests/Token/PasswordResetMatrixTest.php back/tests/Token/PasswordResetLockContentionTest.php back/tests/Token/PasswordResetLimiterContentionTest.php
+          if [ -z "$SYMSVEL_CI_POSTGRES_PASSWORD" ]; then
+            echo "::error::SYMSVEL_CI_POSTGRES_PASSWORD is required for local database CI."
+            exit 1
+          fi
+          case "$ENGINE" in
+            postgres)
+              export PGPASSWORD="$SYMSVEL_CI_POSTGRES_PASSWORD"
+              pg_isready -h postgres -U symsvel_ci -d postgres
+              dropdb --if-exists --force -h postgres -U symsvel_ci symsvel_auth_ci
+              createdb -h postgres -U symsvel_ci symsvel_auth_ci
+              export SYMSVEL_AUTH_TEST_DATABASE_URL="$(php -r 'echo "postgresql://symsvel_ci:".rawurlencode(getenv("SYMSVEL_CI_POSTGRES_PASSWORD"))."@postgres:5432/symsvel_auth_ci";')"
+              ;;
+            mysql|mariadb)
+              mysql --host="$ENGINE" --user=root --password="$SYMSVEL_CI_POSTGRES_PASSWORD" --execute='DROP DATABASE IF EXISTS symsvel_auth_ci; CREATE DATABASE symsvel_auth_ci'
+              export SYMSVEL_AUTH_TEST_DATABASE_URL="$(php -r 'echo "mysql://root:".rawurlencode(getenv("SYMSVEL_CI_POSTGRES_PASSWORD"))."@".getenv("ENGINE").":3306/symsvel_auth_ci";')"
+              ;;
+            *)
+              echo "::error::Unexpected database engine."
+              exit 1
+              ;;
+          esac
+          vendor/bin/phpunit -c back/phpunit.xml.dist back/tests/Token/DbalTokenStoreMatrixTest.php back/tests/Token/RefreshLockContentionTest.php back/tests/Token/PasswordResetMatrixTest.php back/tests/Token/PasswordResetLockContentionTest.php back/tests/Token/PasswordResetLimiterContentionTest.php
 
   bo-integration:
     runs-on: [self-hosted, linux, ARM64, symsvel]
