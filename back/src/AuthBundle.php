@@ -12,6 +12,7 @@ use SymSvel\Module\Auth\Controller\BoLogoutController;
 use SymSvel\Module\Auth\Controller\BoSessionController;
 use SymSvel\Module\Auth\Controller\PasswordResetCompleteController;
 use SymSvel\Module\Auth\Controller\EmailVerificationCompleteController;
+use SymSvel\Module\Auth\Controller\AdminInvitationCompleteController;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
@@ -22,6 +23,7 @@ use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
 use SymSvel\Module\Auth\Identity\AdminInvitationOwners;
 use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
+use SymSvel\Module\Auth\Identity\AdminInvitationDispatch;
 use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
@@ -33,6 +35,7 @@ use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
+use SymSvel\Module\Auth\Service\AdminInvitationUrlResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
@@ -67,6 +70,8 @@ final class AuthBundle extends AbstractBundle
         $builder->register(PasswordResetUrlResolver::class, PasswordResetUrlResolver::class)
             ->setAutowired(true);
         $builder->register(EmailVerificationUrlResolver::class, EmailVerificationUrlResolver::class)
+            ->setAutowired(true);
+        $builder->register(AdminInvitationUrlResolver::class, AdminInvitationUrlResolver::class)
             ->setAutowired(true);
 
         // Reuse the same DBAL connection as the host application.
@@ -110,7 +115,7 @@ final class AuthBundle extends AbstractBundle
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
-        foreach ([BoLoginController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class] as $controller) {
+        foreach ([BoLoginController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
             $builder->register($controller, $controller)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');
@@ -128,6 +133,7 @@ final class AuthBundle extends AbstractBundle
             PasswordLogin::class,
             PasswordResetDispatch::class,
             EmailVerificationDispatch::class,
+            AdminInvitationDispatch::class,
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }

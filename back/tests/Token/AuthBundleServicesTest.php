@@ -11,12 +11,14 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 use Symfony\Component\DependencyInjection\Reference;
 use SymSvel\Module\Auth\AuthBundle;
 use SymSvel\Module\Auth\Controller\EmailVerificationCompleteController;
+use SymSvel\Module\Auth\Controller\AdminInvitationCompleteController;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
 use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
+use SymSvel\Module\Auth\Identity\AdminInvitationDispatch;
 use SymSvel\Module\Auth\Identity\AdminInvitationOwners;
 use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
@@ -47,6 +49,8 @@ final class AuthBundleServicesTest extends TestCase
         $configurator = (new \ReflectionClass(ContainerConfigurator::class))->newInstanceWithoutConstructor();
         (new AuthBundle())->loadExtension([], $configurator, $builder);
 
+        self::assertTrue($builder->hasDefinition(AdminInvitationCompleteController::class));
+        self::assertArrayHasKey('controller.service_arguments', $builder->getDefinition(AdminInvitationCompleteController::class)->getTags());
         self::assertTrue($builder->hasDefinition(EmailVerificationCompleteController::class));
         self::assertArrayHasKey('controller.service_arguments', $builder->getDefinition(EmailVerificationCompleteController::class)->getTags());
 
@@ -96,6 +100,7 @@ final class AuthBundleServicesTest extends TestCase
             PasswordResetLimiter::class,
             PasswordResetDispatch::class,
             EmailVerificationDispatch::class,
+            AdminInvitationDispatch::class,
             AuthenticatedTokenResolver::class,
             TokenIssuer::class,
             TokenRotation::class,

@@ -521,3 +521,11 @@ Il n'existe **toujours pas d'endpoint public ni de flux d'invitation fonctionnel
 Le test `AdminInvitationCompletionTest` vérifie la liaison à l'adresse courante, l'activation atomique, l'impossibilité de réutiliser le jeton, ainsi que le rollback pour un compte désactivé ; `AuthBundleServicesTest` contrôle le câblage Symfony.
 
 **Non livré** : création/invitation d'un nouvel admin, émission du mail, endpoint HTTP et parcours Svelte. Aucun flux public n'est ouvert par cette étape. La CI et les CT multi-SGBD restent à valider.
+
+## Livraison groupée : invitation BO via mail et finalisation HTTP (16/11/2026)
+
+Le paramètre privé `auth.bo_invitation_url` définit l'adresse HTTPS de la page d'activation BO ; `AdminInvitationUrlResolver` refuse HTTP, identifiants intégrés, query strings et fragments. `AdminInvitationDispatch` est un **service interne** : un appelant BO autorisé lui fournit l'identifiant et l'adresse du compte invité après création côté Admins. Il génère le jeton dédié, le conserve sous empreinte et diffuse le message FR/EN `auth.bo.admin_invitation` via Mails. Il n'est pas exposé par un endpoint d'émission anonyme.
+
+`POST /apibo/auth/invitation/complete` reçoit `token` et `password` en JSON, refuse les entrées incorrectes et s'appuie sur `AdminInvitationCompletion` pour consommer le jeton et confirmer le mail en créant le mot de passe dans une même transaction. Les réponses ne sont pas mises en cache et les échecs ne révèlent pas les comptes. Tests du contrôleur, rendu Twig, configuration des templates et câblage Symfony inclus.
+
+**Non terminé** : création et autorisation des administrateurs invités dans Admins (notamment rôle explicite et absence d'habilitation DEV par défaut), envoi sous contrôle du créateur, intégration des écrans Svelte, CI de ce commit et crash-tests multi-SGBD. Aucun parcours complet n'est revendiqué.

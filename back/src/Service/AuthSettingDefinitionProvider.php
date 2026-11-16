@@ -35,6 +35,13 @@ final class AuthSettingDefinitionProvider implements SettingDefinitionProviderIn
             description: 'URL HTTPS de confirmation App, si App est installée.',
         );
         yield new SettingDefinition(
+            key: 'bo_invitation_url',
+            label: 'URL d’activation d’une invitation administrateur BO',
+            group: 'authentication',
+            type: 'url',
+            description: 'URL HTTPS de création du premier mot de passe BO, sans paramètre.',
+        );
+        yield new SettingDefinition(
             key: 'app_reset_url',
             label: 'URL de récupération du mot de passe App',
             group: 'authentication',

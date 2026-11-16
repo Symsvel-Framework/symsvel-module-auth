@@ -35,5 +35,16 @@ final readonly class AuthMailTemplateProvider implements MailTemplateProviderInt
             }
             yield new MailTemplate('auth.'.$context.'.email_verification', $verificationLocales, ['verificationUrl']);
         }
+
+        $invitationLocales = [];
+        foreach (['fr', 'en'] as $locale) {
+            $prefix = sprintf('@Auth/mail/admin-invitation/%s/', $locale);
+            $invitationLocales[$locale] = [
+                'subject' => $prefix.'subject.twig',
+                'html' => $prefix.'body.html.twig',
+                'text' => $prefix.'body.txt.twig',
+            ];
+        }
+        yield new MailTemplate('auth.bo.admin_invitation', $invitationLocales, ['invitationUrl']);
     }
 }
