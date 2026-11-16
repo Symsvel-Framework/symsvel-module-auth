@@ -7,6 +7,8 @@ namespace SymSvel\Module\Auth;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use SymSvel\Module\Auth\Controller\BoLoginController;
+use SymSvel\Module\Auth\Browser\TrustedBoOrigin;
+use SymSvel\Module\Auth\Controller\BoBrowserSessionController;
 use SymSvel\Module\Auth\Controller\AppAuthenticationController;
 use SymSvel\Module\Auth\Controller\AppEmailVerificationController;
 use SymSvel\Module\Auth\Controller\AppPasswordResetController;
@@ -121,7 +123,9 @@ final class AuthBundle extends AbstractBundle
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
-        foreach ([BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
+        $builder->register(TrustedBoOrigin::class, TrustedBoOrigin::class)->setAutowired(true);
+
+        foreach ([BoBrowserSessionController::class, BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
             $builder->register($controller, $controller)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');
