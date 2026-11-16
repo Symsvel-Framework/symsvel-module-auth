@@ -600,3 +600,7 @@ L'URL de confirmation App est désormais **dérivée**, et non configurable dans
 
 Les métadonnées absentes, corrompues ou invalides provoquent un refus fermé et journalisé par les endpoints publics sans divulgation d'existence de compte. `AuthSettingDefinitionProvider` ne publie plus `auth.app_verify_email_url`. La résolution BO conserve, pour cette passe, `auth.bo_verify_email_url` et les URL de récupération/invitation restent inchangées. Tests unitaires de construction et de validation du domaine et parcours intégré Users adaptés. CI et CT SMTP réel requis avant clôture.
 
+
+## Indicateur de diversité pour l'activation BO (16/11/2026)
+
+L'écran public `/auth/activate` réutilise le helper natif `src/lib/password/strength.ts` du BO hôte. Il décrit en FR/EN la politique existante de 12 à 1024 octets UTF-8 sans NUL et affiche une jauge de diversité indicative. Il n'impose pas de catégorie de caractères additionnelle, contrairement à un pseudo-critère de robustesse non appliqué par le serveur. La validation finale `validInvitationPassword()` et les contrôles PHP restent inchangés. Le HTML `minlength=12` a été retiré pour aligner les limites UTF-8 avec PHP. CI et CT navigateur restent à valider.
