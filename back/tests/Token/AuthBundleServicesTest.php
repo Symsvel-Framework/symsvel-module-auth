@@ -28,6 +28,7 @@ use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
 use SymSvel\Module\Auth\Token\DbalEmailVerificationStore;
+use SymSvel\Module\Auth\Token\DbalAdminInvitationStore;
 use SymSvel\Module\Auth\Token\TokenIssuer;
 use SymSvel\Module\Auth\Token\TokenLogout;
 use SymSvel\Module\Auth\Token\TokenRotation;
@@ -74,6 +75,10 @@ final class AuthBundleServicesTest extends TestCase
         $confirmationConnection = $builder->getDefinition(DbalEmailVerificationStore::class)->getArgument('$connection');
         self::assertInstanceOf(Reference::class, $confirmationConnection);
         self::assertSame('doctrine.dbal.default_connection', (string) $confirmationConnection);
+
+        $invitationConnection = $builder->getDefinition(DbalAdminInvitationStore::class)->getArgument('$connection');
+        self::assertInstanceOf(Reference::class, $invitationConnection);
+        self::assertSame('doctrine.dbal.default_connection', (string) $invitationConnection);
 
         $connection = $builder->getDefinition(DbalTokenStore::class)->getArgument('$connection');
         self::assertInstanceOf(Reference::class, $connection);
