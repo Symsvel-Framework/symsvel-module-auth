@@ -50,4 +50,4 @@ final readonly class AppInvitationCompleteController
         $response->headers->set('Pragma', 'no-cache');
         return $response;
     }
-
+}

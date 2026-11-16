@@ -12,7 +12,7 @@ final class AuthMailTemplateProviderTest extends TestCase
     public function testProvidesLocalizedRecoveryAndVerificationTemplatesForBothContexts(): void
     {
         $templates = iterator_to_array((new AuthMailTemplateProvider())->templates());
-        self::assertCount(5, $templates);
+        self::assertCount(6, $templates);
 
         $expected = [
             'auth.bo.password_reset' => ['resetUrl', 'password-reset'],
@@ -20,6 +20,7 @@ final class AuthMailTemplateProviderTest extends TestCase
             'auth.app.password_reset' => ['resetUrl', 'password-reset'],
             'auth.app.email_verification' => ['verificationUrl', 'email-verification'],
             'auth.bo.admin_invitation' => ['invitationUrl', 'admin-invitation'],
+            'auth.app.user_invitation' => ['invitationUrl', 'app-invitation'],
         ];
 
         foreach ($templates as $template) {

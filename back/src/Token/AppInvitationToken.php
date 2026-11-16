@@ -31,4 +31,4 @@ final readonly class AppInvitationToken
     {
         return preg_match('/^[A-Za-z0-9_-]{43}$/D', $raw) ? hash('sha256', $raw) : null;
     }
-
+}

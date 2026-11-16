@@ -27,12 +27,12 @@ final class AuthSettingDefinitionProviderTest extends TestCase
         $registry = new SettingRegistry([]);
         $registry->registerOwned(new AuthSettingDefinitionProvider(), 'auth', new SettingKeyQualifier());
         $definitions = $registry->all();
-        self::assertCount(4, $definitions);
+        self::assertCount(5, $definitions);
         $byKey = [];
         foreach ($definitions as $definition) {
             $byKey[$definition->key] = $definition;
         }
-        foreach (['auth.bo_reset_url', 'auth.app_reset_url', 'auth.bo_verify_email_url', 'auth.bo_invitation_url'] as $key) {
+        foreach (['auth.bo_reset_url', 'auth.app_reset_url', 'auth.bo_verify_email_url', 'auth.bo_invitation_url', 'auth.app_invitation_url'] as $key) {
             self::assertArrayHasKey($key, $byKey);
             self::assertSame('url', $byKey[$key]->type);
             self::assertFalse($byKey[$key]->public);

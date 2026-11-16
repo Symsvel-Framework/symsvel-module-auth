@@ -52,4 +52,4 @@ final readonly class DbalAppInvitationStore
     {
         return $when->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s.u');
     }
-
+}

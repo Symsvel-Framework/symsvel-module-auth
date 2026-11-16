@@ -36,4 +36,4 @@ final readonly class AppInvitationCompletion
             return false;
         }
     }
-
+}
