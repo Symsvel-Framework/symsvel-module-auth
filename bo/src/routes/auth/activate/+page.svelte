@@ -80,7 +80,7 @@
         <input id="invitation-password" type="password" autocomplete="new-password"
           bind:value={password} maxlength="1024" required />
         <small>{t.minimum}</small>
-        <meter min="0" max="4" value={strength.score} aria-label={t.strength} />
+        <meter min="0" max="4" value={strength.score} aria-label={t.strength}></meter>
         <small aria-live="polite">{t.strength}: {t.strengthLevels[strength.score]}</small>
         <small>{t.strengthHint}</small>
         <label for="invitation-confirm">{t.confirmation}</label>
