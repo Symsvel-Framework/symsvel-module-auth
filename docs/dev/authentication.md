@@ -547,3 +547,8 @@ Pour une installation avec App/Users, Auth expose un ensemble distinct des route
 Les contrôleurs `AppAuthenticationController` et `AppEmailVerificationController` délèguent aux services existants `PasswordLogin`, `TokenRotation`, `AuthenticatedTokenResolver`, `EmailVerificationDispatch` et `EmailVerificationCompletion`. `ContextSessionLogout` mutualise la révocation transactionnelle BO/App ; `BoSessionLogout` conserve son interface publique historique. Les tokens et leurs empreintes restent séparés par contexte. La connexion est refusée si Users ne fournit pas un compte actif et vérifié. Aucune exigence Users n'est ajoutée aux installations BO seules.
 
 `PasswordResetLimiter::allowRegistration` réserve un namespace de quotas propre à l'inscription publique App. Les routes d'inscription et la persistance appartiennent à Users et non à Auth. Les réponses d'API sont `no-store` ; les points de délivrance ne révèlent pas l'existence d'une adresse. Limites : contrôles CSRF/CORS, transport final HttpOnly, tests sur projet assemblé et CT à valider.
+
+### Correction de tests (16/11/2026)
+
+Le test des routes App lit le premier argument de l'attribut Route via ReflectionAttribute::getArguments() ; l'attribut ne fournit pas getPath() sur Symfony 8.
+Le fichier PHPUnit inclut désormais `tests/Unit` à côté de `tests/Token`, supprimant un angle mort de CI. Les tests historiquement non exécutés redeviennent bloquants.

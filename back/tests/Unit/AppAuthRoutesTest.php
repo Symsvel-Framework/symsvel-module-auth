@@ -29,7 +29,7 @@ final class AppAuthRoutesTest extends TestCase
             foreach ($routes as $method => $path) {
                 $attributes = (new \ReflectionMethod($controller, $method))->getAttributes(\Symfony\Component\Routing\Attribute\Route::class);
                 self::assertCount(1, $attributes);
-                self::assertSame($path, $attributes[0]->newInstance()->getPath());
+                self::assertSame($path, $attributes[0]->getArguments()[0]);
             }
         }
     }
