@@ -47,3 +47,14 @@ d'URL basée sur le domaine runtime, sans paramètres Auth en BDD.
 Ils sélectionnent explicitement `mails.transport=mailpit`, conformément
 au nouvel envoi sans fallback de Mails. Les scénarios de domaine
 manquant échouent avant toute réservation de quota ou recherche de compte.
+
+
+### Schéma des liens en développement local (16/11/2026)
+
+Sans origine de déploiement explicite, `AuthPageUrls` choisit
+`http://` pour les domaines de Setup terminant en `.localhost`,
+`.local` ou `.test` lorsque `APP_ENV=dev`. Les autres domaines
+et les environnements de production restent en HTTPS. Le développeur
+peut forcer une origine HTTPS locale via la configuration de
+déploiement `SYMSVEL_BO_ORIGIN` / `SYMSVEL_APP_ORIGIN`.
+Le choix ne dépend jamais du `Host` de la requête reçue.

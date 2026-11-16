@@ -25,7 +25,7 @@ final class AuthSettingDefinitionProviderTest extends TestCase
 
     public function testAllCallbackUrlsUseSetupPublishedDomainAndKnownRoutes(): void
     {
-        $pages = new AuthPageUrls('dev', 'xt.localhost');
+        $pages = new AuthPageUrls('prod', 'xt.localhost');
         self::assertSame('https://bo.xt.localhost/reset-password', (new PasswordResetUrlResolver($pages))->forContext('bo'));
         self::assertSame('https://app.xt.localhost/reset-password', (new PasswordResetUrlResolver($pages))->forContext('app'));
         self::assertSame('https://bo.xt.localhost/verify-email', (new EmailVerificationUrlResolver($pages))->forContext('bo'));
@@ -44,6 +44,15 @@ final class AuthSettingDefinitionProviderTest extends TestCase
             } catch (\LogicException) {
             }
         }
+    }
+
+    public function testLocalDevelopmentUsesHttpForReservedDomainsWithoutRequestHost(): void
+    {
+        $pages = new AuthPageUrls('dev', 'xt.localhost');
+        self::assertSame('http://bo.xt.localhost/auth/activate', $pages->forPage('bo', 'invitation'));
+        self::assertSame('http://app.xt.localhost/verify-email', $pages->forPage('app', 'verify'));
+        $public = new AuthPageUrls('dev', 'example.org');
+        self::assertSame('https://bo.example.org/reset-password', $public->forPage('bo', 'reset'));
     }
 
     public function testProductionCanUseExplicitDeploymentOriginsButNeverHttp(): void

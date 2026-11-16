@@ -48,7 +48,11 @@ final readonly class AuthPageUrls
         };
 
         if ($explicit === null || $explicit === '') {
-            return 'https://'.$expectedHost;
+            // A development virtual host is usually served over local HTTP.
+            // Production and non-reserved domains always default to HTTPS.
+            $local = $this->environment === 'dev'
+                && preg_match('/\.(?:localhost|local|test)$/D', $domain) === 1;
+            return ($local ? 'http://' : 'https://').$expectedHost;
         }
 
         $parts = parse_url($explicit);
