@@ -552,3 +552,7 @@ Les contrôleurs `AppAuthenticationController` et `AppEmailVerificationControlle
 
 Le test des routes App lit le premier argument de l'attribut Route via ReflectionAttribute::getArguments() ; l'attribut ne fournit pas getPath() sur Symfony 8.
 Le fichier PHPUnit inclut désormais `tests/Unit` à côté de `tests/Token`, supprimant un angle mort de CI. Les tests historiquement non exécutés redeviennent bloquants.
+
+### Réactivation de la suite Unit (16/11/2026)
+
+La correction de `back/phpunit.xml.dist` a révélé quatre assertions historiquement non exécutées. Deux utilisaient une identité d'objet `DateTimeImmutable` (`assertSame`) au lieu d'une comparaison des instants (`assertEquals`). Deux exigeaient le texte exact `Cache-Control: no-store`, alors que Symfony normalise parfois l'entête en `no-store, private` ; elles vérifient désormais la **directive de confidentialité effective** avec `hasCacheControlDirective('no-store')`. Aucun runtime, durée de token ni politique de cache n'a été affaibli.

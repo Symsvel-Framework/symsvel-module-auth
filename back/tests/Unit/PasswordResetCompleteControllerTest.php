@@ -46,7 +46,7 @@ final class PasswordResetCompleteControllerTest extends TestCase
         ], JSON_THROW_ON_ERROR));
         $response = $controller->bo($unknown);
         self::assertSame(400, $response->getStatusCode());
-        self::assertSame('no-store', $response->headers->get('Cache-Control'));
+        self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
         self::assertSame('invalid_reset_token', json_decode((string) $response->getContent(), true)['error']['code']);
     }
     public function testValidTokenCompletesThroughHttpController(): void

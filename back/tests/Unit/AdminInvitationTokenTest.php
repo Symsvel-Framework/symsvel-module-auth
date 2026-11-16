@@ -18,7 +18,7 @@ final class AdminInvitationTokenTest extends TestCase
         self::assertNotSame($first->raw, $second->raw);
         self::assertSame(hash('sha256', $first->raw), $first->hash);
         self::assertSame($first->hash, AdminInvitationToken::fingerprint($first->raw));
-        self::assertSame($now->modify('+3600 seconds'), $first->expiresAt);
+        self::assertEquals($now->modify('+3600 seconds'), $first->expiresAt);
     }
 
     public function testRejectsMalformedInput(): void

@@ -15,7 +15,7 @@ final class BoSessionControllerTest extends TestCase
     {
         $response = $this->controller()->__invoke(Request::create('/apibo/auth/me'));
         self::assertSame(401, $response->getStatusCode());
-        self::assertSame('no-store', $response->headers->get('Cache-Control'));
+        self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
     }
 
     public function testMalformedBearerIsRejectedBeforeTokenLookup(): void

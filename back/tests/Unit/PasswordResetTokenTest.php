@@ -19,7 +19,7 @@ final class PasswordResetTokenTest extends TestCase
         self::assertNotSame($bo->raw, $app->raw);
         self::assertSame(hash('sha256', $bo->raw), $bo->hash);
         self::assertSame($bo->hash, PasswordResetToken::fingerprint($bo->raw));
-        self::assertSame($now->modify('+1800 seconds'), $bo->expiresAt);
+        self::assertEquals($now->modify('+1800 seconds'), $bo->expiresAt);
     }
 
     public function testRejectsMalformedTokensAndContexts(): void
