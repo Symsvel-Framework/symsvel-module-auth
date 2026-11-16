@@ -24,6 +24,7 @@ use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Schema\EmailVerificationSchema;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
+use SymSvel\Module\Auth\Service\AuthPageUrls;
 use SymSvel\Module\Auth\Schema\PasswordResetLimitSchema;
 use SymSvel\Module\Auth\Token\DbalEmailVerificationStore;
 use SymSvel\Module\Auth\Token\TokenSubject;
@@ -54,7 +55,7 @@ final class EmailVerificationDispatchTest extends TestCase
         self::assertTrue($dispatch->dispatch('bo', 'known', 'fr', '192.0.2.10', $now));
         self::assertInstanceOf(Email::class, $message);
         self::assertSame('pending@example.test', $message->getTo()[0]->getAddress());
-        self::assertStringContainsString('https://bo.example.test/confirm-email?token=', (string) $message->getTextBody());
+        self::assertStringContainsString('https://bo.example.test/verify-email?token=', (string) $message->getTextBody());
         self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_email_verification_tokens'));
         self::assertSame(hash('sha256', 'pending@example.test'), $db->fetchOne(
             'SELECT email_hash FROM symsvel_auth_email_verification_tokens',
@@ -86,7 +87,7 @@ final class EmailVerificationDispatchTest extends TestCase
 
     public function testMissingSetupDomainPreventsSendingOrQuotaReservation(): void
     {
-        [$dispatch, $db, $mailer] = $this->fixture(true);
+        [$dispatch, $db, $mailer] = $this->fixture(true, null);
         $mailer->expects(self::never())->method('send');
         try {
             $dispatch->dispatch('app', 'known', 'fr', '192.0.2.10', new \DateTimeImmutable());
@@ -97,7 +98,7 @@ final class EmailVerificationDispatchTest extends TestCase
     }
 
     /** @return array{EmailVerificationDispatch, \Doctrine\DBAL\Connection, MailerInterface} */
-    private function fixture(bool $active): array
+    private function fixture(bool $active, ?string $domain = 'example.test'): array
     {
         if (!extension_loaded('pdo_sqlite')) {
             self::markTestSkipped('pdo_sqlite is required.');
@@ -144,7 +145,7 @@ final class EmailVerificationDispatchTest extends TestCase
         $config->enableNativeLazyObjects(true);
         $em = new EntityManager(DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]), $config);
         (new SchemaTool($em))->createSchema([$em->getClassMetadata(Setting::class)]);
-        foreach (['mails.sender_email' => 'sender@example.test', 'auth.bo_verify_email_url' => 'https://bo.example.test/confirm-email'] as $key => $value) {
+        foreach (['mails.sender_email' => 'sender@example.test', 'mails.transport' => 'mailpit'] as $key => $value) {
             $setting = new Setting($key);
             $setting->setValue($value);
             $em->persist($setting);
@@ -167,7 +168,7 @@ final class EmailVerificationDispatchTest extends TestCase
         return [
             new EmailVerificationDispatch(
                 new PasswordResetLimiter($db, 'test-secret-at-least-16-characters'),
-                new EmailVerificationUrlResolver($settings, sys_get_temp_dir().'/symsvel-auth-missing-project/backend'),
+                new EmailVerificationUrlResolver(new AuthPageUrls('test', $domain ?? '')),
                 new ContextPasswordResetIdentity([$owner]),
                 new ContextEmailVerificationIdentity([$owner]), new DbalEmailVerificationStore($db),
                 $renderer, new ConfiguredMailSender(new MailSender($mailer), $settings),

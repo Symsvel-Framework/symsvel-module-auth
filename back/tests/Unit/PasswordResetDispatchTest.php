@@ -22,6 +22,7 @@ use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Schema\PasswordResetSchema;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
+use SymSvel\Module\Auth\Service\AuthPageUrls;
 use SymSvel\Module\Auth\Schema\PasswordResetLimitSchema;
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\TokenSubject;
@@ -53,7 +54,7 @@ final class PasswordResetDispatchTest extends TestCase
         self::assertInstanceOf(Email::class, $message);
         self::assertSame('verified@example.test', $message->getTo()[0]->getAddress());
         self::assertSame('sender@example.test', $message->getFrom()[0]->getAddress());
-        self::assertStringContainsString('https://bo.example.test/reset?token=', (string) $message->getTextBody());
+        self::assertStringContainsString('https://bo.example.test/reset-password?token=', (string) $message->getTextBody());
         self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens'));
         $hash = (string) $db->fetchOne('SELECT token_hash FROM symsvel_auth_password_reset_tokens');
         self::assertMatchesRegularExpression('/^[a-f0-9]{64}$/D', $hash);
@@ -82,9 +83,9 @@ final class PasswordResetDispatchTest extends TestCase
         self::assertSame(2, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_reset_limits'));
     }
 
-    public function testMissingAppUrlFailsBeforeIdentityLookup(): void
+    public function testMissingSetupDomainFailsBeforeIdentityLookup(): void
     {
-        [$dispatch, $db, $mailer] = $this->fixture(true);
+        [$dispatch, $db, $mailer] = $this->fixture(true, null);
         $mailer->expects(self::never())->method('send');
         $this->expectException(\LogicException::class);
         try {
@@ -96,7 +97,7 @@ final class PasswordResetDispatchTest extends TestCase
     }
 
     /** @return array{PasswordResetDispatch, \Doctrine\DBAL\Connection, MailerInterface} */
-    private function fixture(bool $active): array
+    private function fixture(bool $active, ?string $domain = 'example.test'): array
     {
         if (!extension_loaded('pdo_sqlite')) {
             self::markTestSkipped('pdo_sqlite is required.');
@@ -134,7 +135,7 @@ final class PasswordResetDispatchTest extends TestCase
         $config->enableNativeLazyObjects(true);
         $em = new EntityManager(DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]), $config);
         (new SchemaTool($em))->createSchema([$em->getClassMetadata(Setting::class)]);
-        foreach (['mails.sender_email' => 'sender@example.test', 'auth.bo_reset_url' => 'https://bo.example.test/reset'] as $key => $value) {
+        foreach (['mails.sender_email' => 'sender@example.test', 'mails.transport' => 'mailpit'] as $key => $value) {
             $setting = new Setting($key);
             $setting->setValue($value);
             $em->persist($setting);
@@ -157,7 +158,7 @@ final class PasswordResetDispatchTest extends TestCase
         return [
             new PasswordResetDispatch(
                 new PasswordResetLimiter($db, 'test-secret-at-least-16-characters'),
-                new PasswordResetUrlResolver($settings),
+                new PasswordResetUrlResolver(new AuthPageUrls('test', $domain ?? '')),
                 new ContextPasswordResetIdentity([$owner]), new DbalPasswordResetStore($db),
                 $renderer, new ConfiguredMailSender(new MailSender($mailer), $settings),
             ),

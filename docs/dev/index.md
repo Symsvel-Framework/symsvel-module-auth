@@ -37,3 +37,13 @@ présentes dans l'interface hôte avant qu'un mail y conduisant soit
 émis ; cette passe fixe la génération d'URL, sans présumer de la
 disponibilité des pages UI. La QA couvre les origines et refus
 de domaines malformés, et le CT XT doit confirmer les parcours.
+
+
+### Tests de distribution (16/11/2026)
+
+Les tests d'envoi `PasswordResetDispatchTest` et
+`EmailVerificationDispatchTest` utilisent à présent la génération
+d'URL basée sur le domaine runtime, sans paramètres Auth en BDD.
+Ils sélectionnent explicitement `mails.transport=mailpit`, conformément
+au nouvel envoi sans fallback de Mails. Les scénarios de domaine
+manquant échouent avant toute réservation de quota ou recherche de compte.
