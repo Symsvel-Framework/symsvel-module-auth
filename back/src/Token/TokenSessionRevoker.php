@@ -17,6 +17,22 @@ final readonly class TokenSessionRevoker
 
     public function revokeAll(TokenSubject $subject, \DateTimeImmutable $now): void
     {
-        $this->store->transaction(fn () => $this->store->revokeSubject($subject, $now));
+        $this->revokeWith($subject, $now, static fn () => null);
+    }
+
+    /**
+     * Run a module-owned account mutation and session revocation in a single
+     * TokenStore transaction. Callers must not open an outer DBAL transaction:
+     * SQLite token storage deliberately requires the outermost writer lock.
+     * The operation must use the same DBAL connection as the token store.
+     */
+    public function revokeWith(TokenSubject $subject, \DateTimeImmutable $now, callable $operation): mixed
+    {
+        return $this->store->transaction(function () use ($subject, $now, $operation): mixed {
+            $result = $operation();
+            $this->store->revokeSubject($subject, $now);
+
+            return $result;
+        });
     }
 }
