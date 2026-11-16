@@ -16,6 +16,8 @@ use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
+use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
+use SymSvel\Module\Auth\Identity\AdminInvitationOwners;
 use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
@@ -52,6 +54,11 @@ final class AuthBundleServicesTest extends TestCase
         $emailOwners = $builder->getDefinition(ContextEmailVerificationIdentity::class)->getArgument('$providers');
         self::assertInstanceOf(TaggedIteratorArgument::class, $emailOwners);
         self::assertSame('symsvel.auth.email_verification_identity', $emailOwners->getTag());
+        self::assertTrue($builder->hasDefinition(AdminInvitationCompletion::class));
+        self::assertTrue($builder->getDefinition(AdminInvitationCompletion::class)->isAutowired());
+        $invitationOwners = $builder->getDefinition(AdminInvitationOwners::class)->getArgument('$owners');
+        self::assertInstanceOf(TaggedIteratorArgument::class, $invitationOwners);
+        self::assertSame('symsvel.auth.admin_invitation_identity', $invitationOwners->getTag());
         self::assertTrue($builder->hasDefinition(EmailVerificationCompletion::class));
         self::assertTrue($builder->getDefinition(EmailVerificationCompletion::class)->isAutowired());
 
