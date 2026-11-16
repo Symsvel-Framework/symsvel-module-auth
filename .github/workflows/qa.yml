@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify preinstalled PHP 8.4 and database drivers
         env:
-          ENGINE: \${{ matrix.engine }}
+          ENGINE: ${{ matrix.engine }}
         run: |
           php -v
           php -r '$needed = match (getenv("ENGINE")) { "postgres" => "pdo_pgsql", "mysql", "mariadb" => "pdo_mysql", default => throw new RuntimeException("Unknown engine") }; $missing = array_values(array_filter(["pdo_sqlite", $needed], static fn (string $driver): bool => !extension_loaded($driver))); if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || $missing !== []) { fwrite(STDERR, "Unsupported PHP or missing drivers for ".getenv("ENGINE").": ".implode(", ", $missing)."\\n"); exit(1); }'

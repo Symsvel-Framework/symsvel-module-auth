@@ -582,3 +582,5 @@ Les jobs de matrice ne passent pas la prévalidation des extensions PHP sur l'im
 ### Précision du diagnostic PHP (16/11/2026)
 
 Sur les runners locaux, le précontrôle a confirmé **l'absence de `pdo_mysql`**. PostgreSQL ne doit pas échouer pour ce seul manque : le contrôle est maintenant **spécifique à chaque moteur** (`pdo_pgsql` pour PostgreSQL, `pdo_mysql` pour MySQL/MariaDB, `pdo_sqlite` requis en complément). La CI MySQL/MariaDB restera volontairement rouge tant que l'image runner ne fournit pas `pdo_mysql`; le correctif d'image attendu est l'ajout de l'extension PHP native, par exemple `RUN docker-php-ext-install pdo_mysql` dans son Dockerfile, suivi d'une reconstruction et d'un redémarrage des runners. Cette opération système n'est pas réalisée depuis les dépôts du framework.
+
+**Correction du câblage GitHub Actions :** le paramètre `ENGINE` doit recevoir directement `${{ matrix.engine }}` sans antislash littéral en YAML. Une interpolation précédente avait produit `\\postgres` au lieu de `postgres` et déclenché le refus de moteur avant le diagnostic de pilote. Cette correction ne change aucun test ni accès BDD.
