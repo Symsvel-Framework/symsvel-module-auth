@@ -491,3 +491,11 @@ Le workflow `qa.yml` fournit explicitement le secret GitHub Actions `SYMSVEL_REA
 ## Correction du précontrôle de permissions CI (15/11/2026)
 
 Le précontrôle du workflow Auth interroge désormais uniquement les dépôts privés dont Auth dépend directement : `symsvel-module-mails` et `symsvel-module-settings`. Exiger aussi la lecture de `symsvel-module-auth` lui-même ajoutait une permission sans justification technique et pouvait bloquer un jeton à portée restreinte pourtant suffisant pour installer ses dépendances. Admins et Users conservent le contrôle de leurs trois dépendances privées (Auth, Mails et Settings). La disponibilité effective des secrets GitHub et la validité de leurs autorisations ne peuvent pas être déduites du manifeste ; la CI doit les confirmer. Aucun code runtime modifié.
+
+## Décision : validation e-mail et création du mot de passe administrateur (16/11/2026)
+
+L'administrateur initial `ROLE_DEV` est créé via le Setup Wizard **local**, qui est une opération d'initialisation de confiance : son e-mail doit être marqué vérifié à la création, sans message de confirmation. Les futurs administrateurs suivent un **parcours unique d'invitation**, dans lequel la création initiale de leur mot de passe valide simultanément la possession de leur adresse e-mail. Il ne faut pas leur envoyer successivement un lien d'activation et un second lien de vérification. La preuve doit reposer sur un jeton expirant, à usage unique, lié au sujet, à son contexte BO et à son adresse actuelle, avec confirmation et création du mot de passe atomiques.
+
+Les utilisateurs `app` conservent une confirmation d'e-mail obligatoire. Un changement d'adresse impose dans les deux contextes une nouvelle vérification. Auth conserve la responsabilité des secrets et des opérations transactionnelles ; Admins/Users possèdent l'état des comptes, Mails délivre les messages, Setup ne reçoit pas de logique métier Auth.
+
+**Attention** : décision architecturale validée, pas livraison du parcours d'invitation ni du bootstrap adapté. Les endpoints et primitives déjà présents ne doivent pas être présentés comme une preuve de conformité à cette règle avant réalisation des tests et crash-tests.
