@@ -37,7 +37,7 @@ jobs:
       - run: composer qa
 
   database-matrix:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, symsvel]
     strategy:
       fail-fast: false
       matrix:
