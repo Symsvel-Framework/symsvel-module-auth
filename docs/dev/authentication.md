@@ -499,3 +499,9 @@ L'administrateur initial `ROLE_DEV` est créé via le Setup Wizard **local**, qu
 Les utilisateurs `app` conservent une confirmation d'e-mail obligatoire. Un changement d'adresse impose dans les deux contextes une nouvelle vérification. Auth conserve la responsabilité des secrets et des opérations transactionnelles ; Admins/Users possèdent l'état des comptes, Mails délivre les messages, Setup ne reçoit pas de logique métier Auth.
 
 **Attention** : décision architecturale validée, pas livraison du parcours d'invitation ni du bootstrap adapté. Les endpoints et primitives déjà présents ne doivent pas être présentés comme une preuve de conformité à cette règle avant réalisation des tests et crash-tests.
+
+## Amorce du parcours d'invitation administrateur (16/11/2026)
+
+`Auth/Token/AdminInvitationToken` définit le secret opaque de 256 bits réservé aux invitations BO : empreinte SHA-256, durée de vie par défaut d'une heure, validation stricte du format et rejet d'une durée non positive. `AdminInvitationTokenTest` couvre génération, empreinte, durée et entrées invalides.
+
+**Important** : cette primitive seule n'impose pas une séparation des usages : avant d'activer un endpoint, le dépôt de jetons d'invitation devra disposer d'un stockage ou d'un discriminant de finalité distinct des jetons de réinitialisation et de confirmation, empêcher leur consommation croisée, lier le jeton à l'ID et à l'empreinte de l'adresse actuelle, puis réaliser **dans la même transaction** la consommation, la définition du mot de passe et la confirmation de l'adresse. Cette livraison ne crée encore ni invitation, ni email, ni activation HTTP. Le flux reste non opérationnel avant les tests intégrés et crash-tests.
