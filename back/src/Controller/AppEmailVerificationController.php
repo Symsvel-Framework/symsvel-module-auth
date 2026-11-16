@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SymSvel\Module\Auth\Controller;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -16,6 +17,7 @@ final readonly class AppEmailVerificationController
     public function __construct(
         private EmailVerificationDispatch $dispatch,
         private EmailVerificationCompletion $completion,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -36,10 +38,15 @@ final readonly class AppEmailVerificationController
         }
 
         // Uniform public response for unknown, verified and rate-limited accounts.
-        $this->dispatch->dispatch(
-            'app', trim($body['email']), $locale, (string) $request->getClientIp(),
-            new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
-        );
+        try {
+            $this->dispatch->dispatch(
+                'app', trim($body['email']), $locale, (string) $request->getClientIp(),
+                new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
+            );
+        } catch (\Exception $exception) {
+            // Delivery or configuration failure must not disclose a pending account.
+            $this->logger->error('App email verification dispatch failed.', ['exception' => $exception]);
+        }
         return self::answer(['status' => 'accepted'], 202);
     }
 

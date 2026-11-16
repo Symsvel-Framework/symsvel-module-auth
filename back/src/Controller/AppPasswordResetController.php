@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SymSvel\Module\Auth\Controller;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,6 +20,7 @@ final readonly class AppPasswordResetController
     public function __construct(
         private PasswordResetDispatch $dispatch,
         private PasswordResetCompletion $completion,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -36,13 +38,18 @@ final readonly class AppPasswordResetController
             return self::response(['error' => ['code' => 'invalid_request']], 400);
         }
 
-        $this->dispatch->dispatch(
-            'app',
-            strtolower(trim($data['email'])),
-            $data['locale'] ?? 'fr',
-            (string) $request->getClientIp(),
-            new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
-        );
+        try {
+            $this->dispatch->dispatch(
+                'app',
+                strtolower(trim($data['email'])),
+                $data['locale'] ?? 'fr',
+                (string) $request->getClientIp(),
+                new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
+            );
+        } catch (\Exception $exception) {
+            // Preserve the same public response for absent accounts and failed delivery.
+            $this->logger->error('App password reset dispatch failed.', ['exception' => $exception]);
+        }
         return self::response(['status' => 'accepted'], 202);
     }
 

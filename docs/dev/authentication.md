@@ -584,3 +584,12 @@ Les jobs de matrice ne passent pas la prévalidation des extensions PHP sur l'im
 Sur les runners locaux, le précontrôle a confirmé **l'absence de `pdo_mysql`**. PostgreSQL ne doit pas échouer pour ce seul manque : le contrôle est maintenant **spécifique à chaque moteur** (`pdo_pgsql` pour PostgreSQL, `pdo_mysql` pour MySQL/MariaDB, `pdo_sqlite` requis en complément). La CI MySQL/MariaDB restera volontairement rouge tant que l'image runner ne fournit pas `pdo_mysql`; le correctif d'image attendu est l'ajout de l'extension PHP native, par exemple `RUN docker-php-ext-install pdo_mysql` dans son Dockerfile, suivi d'une reconstruction et d'un redémarrage des runners. Cette opération système n'est pas réalisée depuis les dépôts du framework.
 
 **Correction du câblage GitHub Actions :** le paramètre `ENGINE` doit recevoir directement `${{ matrix.engine }}` sans antislash littéral en YAML. Une interpolation précédente avait produit `\\postgres` au lieu de `postgres` et déclenché le refus de moteur avant le diagnostic de pilote. Cette correction ne change aucun test ni accès BDD.
+
+
+## Confidentialité des demandes publiques en cas de panne de livraison (16/11/2026)
+
+Les endpoints anonymes App de demande de confirmation (`/apiopen/auth/email-verification/request`) et de récupération (`/apiopen/auth/password-reset/request`) renvoient toujours `202 {"status":"accepted"}` après validation de l'entrée, y compris si le service de délivrance lève une exception (SMTP indisponible, expéditeur absent ou URL HTTPS non configurée). Sinon, une réponse 500 réservée aux adresses existantes permettrait d'énumérer les comptes. L'exception reste consignée côté serveur par `LoggerInterface` (sans adresse dans le message applicatif), sans atteindre la réponse publique.
+
+La logique de jetons, les quotas anti-abus et la non-vérification des comptes ne changent pas. Un jeton éventuellement persisté avant un échec de livraison reste inutilisable par un client qui ne l'a pas reçu et expire suivant sa politique ; un nouveau lien peut être demandé après expiration du quota. Les défauts d'infrastructure doivent être traités par les opérateurs à partir des logs, non par un message différenciant les comptes dans l'API publique.
+
+La CI PHP et le parcours d'intégration Users/App couvrent cette politique, sous réserve de validation CI puis de crash-tests SMTP réels. La matrice Auth multi-SGBD reste distinctement bloquée sur l'absence de `pdo_mysql` dans les runners et du secret `SYMSVEL_CI_POSTGRES_PASSWORD` dans le job PostgreSQL au 16/11/2026.
