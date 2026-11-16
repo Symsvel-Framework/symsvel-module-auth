@@ -505,3 +505,11 @@ Les utilisateurs `app` conservent une confirmation d'e-mail obligatoire. Un chan
 `Auth/Token/AdminInvitationToken` définit le secret opaque de 256 bits réservé aux invitations BO : empreinte SHA-256, durée de vie par défaut d'une heure, validation stricte du format et rejet d'une durée non positive. `AdminInvitationTokenTest` couvre génération, empreinte, durée et entrées invalides.
 
 **Important** : cette primitive seule n'impose pas une séparation des usages : avant d'activer un endpoint, le dépôt de jetons d'invitation devra disposer d'un stockage ou d'un discriminant de finalité distinct des jetons de réinitialisation et de confirmation, empêcher leur consommation croisée, lier le jeton à l'ID et à l'empreinte de l'adresse actuelle, puis réaliser **dans la même transaction** la consommation, la définition du mot de passe et la confirmation de l'adresse. Cette livraison ne crée encore ni invitation, ni email, ni activation HTTP. Le flux reste non opérationnel avant les tests intégrés et crash-tests.
+
+## Persistance des invitations BO (16/11/2026)
+
+La migration additive `Migration/Version20261116000505.php` définit la table propre à Auth `symsvel_auth_admin_invitations` ; son miroir PHP `AdminInvitationSchema` sert aux tests et reprend les mêmes colonnes et index. Le registre `module.json` inclut cette nouvelle table pour l'installation et la suppression du module.
+
+`DbalAdminInvitationStore` utilise la connexion DBAL partagée et conserve uniquement l'empreinte SHA-256 du jeton et de l'adresse normalisée ; le jeton est lié à l'identifiant de l'administrateur. La consommation repose sur un `UPDATE` conditionnel atomique (non utilisé et non expiré), puis fournit l'identité et l'empreinte de l'adresse. Elle doit être appelée **dans la transaction d'activation** ; les tests SQLite contrôlent usage unique, expiration, invalidité et rollback de consommation. Enregistrement explicite de ce store dans `AuthBundle`.
+
+Il n'existe **toujours pas d'endpoint public ni de flux d'invitation fonctionnel** : à suivre, l'activation atomique de l'administrateur avec contrôle de son adresse actuelle et définition du premier mot de passe, puis l'envoi via Mails et les écrans BO. Les migrations multi-SGBD et crash-tests du projet assemblé ne sont pas encore validés pour cette nouvelle table.
