@@ -45,9 +45,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify preinstalled PHP 8.4 and database drivers
+        env:
+          ENGINE: \${{ matrix.engine }}
         run: |
           php -v
-          php -r '$missing = array_values(array_filter(["pdo_pgsql", "pdo_mysql", "pdo_sqlite"], static fn (string $driver): bool => !extension_loaded($driver))); if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || $missing !== []) { fwrite(STDERR, "Unsupported PHP or missing drivers: ".implode(", ", $missing)."\\n"); exit(1); }'
+          php -r '$needed = match (getenv("ENGINE")) { "postgres" => "pdo_pgsql", "mysql", "mariadb" => "pdo_mysql", default => throw new RuntimeException("Unknown engine") }; $missing = array_values(array_filter(["pdo_sqlite", $needed], static fn (string $driver): bool => !extension_loaded($driver))); if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || $missing !== []) { fwrite(STDERR, "Unsupported PHP or missing drivers for ".getenv("ENGINE").": ".implode(", ", $missing)."\\n"); exit(1); }'
       - name: Install private Composer dependencies
         env:
           SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}

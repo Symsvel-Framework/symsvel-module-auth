@@ -578,3 +578,7 @@ Cette CI utilise les bases de tests locales et ne démontre pas à elle seule la
 ### Diagnostic des extensions PHP sur le runner (16/11/2026)
 
 Les jobs de matrice ne passent pas la prévalidation des extensions PHP sur l'image du runner. Le précontrôle nomme désormais explicitement les pilotes `pdo_pgsql`, `pdo_mysql` ou `pdo_sqlite` manquants, sans masquer le problème par un skip. La prise en charge de ces pilotes dans l'image de build locale reste à vérifier avant de déclarer la matrice verte.
+
+### Précision du diagnostic PHP (16/11/2026)
+
+Sur les runners locaux, le précontrôle a confirmé **l'absence de `pdo_mysql`**. PostgreSQL ne doit pas échouer pour ce seul manque : le contrôle est maintenant **spécifique à chaque moteur** (`pdo_pgsql` pour PostgreSQL, `pdo_mysql` pour MySQL/MariaDB, `pdo_sqlite` requis en complément). La CI MySQL/MariaDB restera volontairement rouge tant que l'image runner ne fournit pas `pdo_mysql`; le correctif d'image attendu est l'ajout de l'extension PHP native, par exemple `RUN docker-php-ext-install pdo_mysql` dans son Dockerfile, suivi d'une reconstruction et d'un redémarrage des runners. Cette opération système n'est pas réalisée depuis les dépôts du framework.
