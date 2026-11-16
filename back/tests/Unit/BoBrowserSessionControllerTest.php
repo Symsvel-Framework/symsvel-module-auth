@@ -20,7 +20,7 @@ final class BoBrowserSessionControllerTest extends TestCase
     {
         $blank = static fn (string $class): object => (new \ReflectionClass($class))->newInstanceWithoutConstructor();
         return new BoBrowserSessionController(
-            new TrustedBoOrigin('/unused', 'https://bo.example.test'),
+            new TrustedBoOrigin('prod', null, 'https://bo.example.test'),
             $blank(PasswordLogin::class),
             $blank(TokenRotation::class),
             $blank(TokenLogout::class),
@@ -96,7 +96,7 @@ final class BoBrowserSessionControllerTest extends TestCase
             file_put_contents($workspace.'/.symsvel/project.json', '{"schema":1,"local_domain":"xt.localhost"}');
             $blank = static fn (string $class): object => (new \ReflectionClass($class))->newInstanceWithoutConstructor();
             $controller = new BoBrowserSessionController(
-                new TrustedBoOrigin($workspace.'/backend', null, 'dev'),
+                new TrustedBoOrigin('dev', 'xt.localhost'),
                 $blank(PasswordLogin::class),
                 $blank(TokenRotation::class),
                 $blank(TokenLogout::class),
