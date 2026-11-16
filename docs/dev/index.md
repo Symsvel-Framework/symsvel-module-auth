@@ -58,3 +58,14 @@ et les environnements de production restent en HTTPS. Le développeur
 peut forcer une origine HTTPS locale via la configuration de
 déploiement `SYMSVEL_BO_ORIGIN` / `SYMSVEL_APP_ORIGIN`.
 Le choix ne dépend jamais du `Host` de la requête reçue.
+
+
+### Origines explicites de production sans domaine local (16/11/2026)
+
+Une origine HTTPS de déploiement fournie explicitement par
+`SYMSVEL_BO_ORIGIN` ou `SYMSVEL_APP_ORIGIN` est suffisante pour le
+contexte concerné. En production, ce cas ne nécessite pas de recopier
+`SYMSVEL_BO_DOMAIN` depuis le Setup local. Le domaine de base reste
+obligatoire si le contexte n'a aucune origine explicite et pour
+valider les dérogations HTTP de développement. La configuration
+continue de refuser chemins, credentials et query strings.

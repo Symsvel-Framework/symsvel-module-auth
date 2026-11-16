@@ -61,6 +61,10 @@ final class AuthSettingDefinitionProviderTest extends TestCase
             'https://admin.example.org', 'https://portal.example.org');
         self::assertSame('https://admin.example.org/auth/activate', $pages->forPage('bo', 'invitation'));
         self::assertSame('https://portal.example.org/verify-email', $pages->forPage('app', 'verify'));
+        // Production can supply explicit public origins without copying the
+        // private local Setup's base domain into the deployed environment.
+        $withoutSetup = new AuthPageUrls('prod', '', 'https://admin.example.org', 'https://portal.example.org');
+        self::assertSame('https://admin.example.org/auth/activate', $withoutSetup->forPage('bo', 'invitation'));
 
         $this->expectException(\LogicException::class);
         (new AuthPageUrls('prod', 'project.example.test', 'http://bo.project.example.test'))

@@ -39,8 +39,6 @@ final readonly class AuthPageUrls
 
     private function origin(string $context): string
     {
-        $domain = $this->domain();
-        $expectedHost = $context.'.'.$domain;
         $explicit = match ($context) {
             'bo' => $this->configuredBoOrigin ?? self::environmentVariable('SYMSVEL_BO_ORIGIN'),
             'app' => $this->configuredAppOrigin ?? self::environmentVariable('SYMSVEL_APP_ORIGIN'),
@@ -48,6 +46,8 @@ final readonly class AuthPageUrls
         };
 
         if ($explicit === null || $explicit === '') {
+            $domain = $this->domain();
+            $expectedHost = $context.'.'.$domain;
             // A development virtual host is usually served over local HTTP.
             // Production and non-reserved domains always default to HTTPS.
             $local = $this->environment === 'dev'
@@ -72,7 +72,8 @@ final readonly class AuthPageUrls
             throw new \LogicException('Invalid trusted authentication origin.');
         }
         if ($parts['scheme'] === 'http'
-            && ($this->environment !== 'dev' || $parts['host'] !== $expectedHost)) {
+            && ($this->environment !== 'dev'
+                || $parts['host'] !== $context.'.'.$this->domain())) {
             throw new \LogicException('Insecure authentication origin is forbidden.');
         }
         if ($parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '') !== $explicit) {
