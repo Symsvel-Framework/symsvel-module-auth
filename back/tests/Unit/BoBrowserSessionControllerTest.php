@@ -75,7 +75,7 @@ final class BoBrowserSessionControllerTest extends TestCase
             new IssuedToken(str_repeat('b', 43), 'hash2', $now),
         );
         $method = new \ReflectionMethod(BoBrowserSessionController::class, 'pairResponse');
-        $response = $method->invoke(null, $pair);
+        $response = $method->invoke($this->controller(), $pair, self::request('login'));
         self::assertSame(200, $response->getStatusCode());
         self::assertStringNotContainsString(str_repeat('b', 43), (string) $response->getContent());
         self::assertArrayNotHasKey('refresh_token', json_decode((string) $response->getContent(), true, 8, JSON_THROW_ON_ERROR));
@@ -86,4 +86,49 @@ final class BoBrowserSessionControllerTest extends TestCase
         self::assertTrue($cookie->isSecure());
         self::assertSame('strict', strtolower((string) $cookie->getSameSite()));
     }
+
+    public function testDevLocalHttpUsesNonSecureHostOnlyCookieWithoutHostPrefix(): void
+    {
+        $workspace = sys_get_temp_dir().'/symsvel-cookie-http-'.bin2hex(random_bytes(6));
+        mkdir($workspace.'/.symsvel', 0700, true);
+        mkdir($workspace.'/backend', 0700);
+        try {
+            file_put_contents($workspace.'/.symsvel/project.json', '{"schema":1,"local_domain":"xt.localhost"}');
+            $blank = static fn (string $class): object => (new \ReflectionClass($class))->newInstanceWithoutConstructor();
+            $controller = new BoBrowserSessionController(
+                new TrustedBoOrigin($workspace.'/backend', null, 'dev'),
+                $blank(PasswordLogin::class),
+                $blank(TokenRotation::class),
+                $blank(TokenLogout::class),
+            );
+            $request = Request::create('http://backend.xt.localhost/apibo/auth/browser/refresh', 'POST');
+            $request->headers->set('Origin', 'http://bo.xt.localhost');
+            $unauthorized = $controller->refresh($request);
+            self::assertSame(401, $unauthorized->getStatusCode());
+            $cookie = $unauthorized->headers->getCookies()[0];
+            self::assertSame('symsvel-bo-refresh-local', $cookie->getName());
+            self::assertFalse($cookie->isSecure());
+            self::assertTrue($cookie->isHttpOnly());
+            self::assertSame('strict', strtolower((string) $cookie->getSameSite()));
+            self::assertNull($cookie->getDomain());
+            self::assertSame('/', $cookie->getPath());
+
+            $now = new \DateTimeImmutable('2099-01-01T00:00:00Z');
+            $pair = new TokenPair(
+                'bo', 'family', new IssuedToken(str_repeat('a', 43), 'hash1', $now),
+                new IssuedToken(str_repeat('b', 43), 'hash2', $now),
+            );
+            $response = (new \ReflectionMethod(BoBrowserSessionController::class, 'pairResponse'))
+                ->invoke($controller, $pair, $request);
+            self::assertSame('symsvel-bo-refresh-local', $response->headers->getCookies()[0]->getName());
+            self::assertFalse($response->headers->getCookies()[0]->isSecure());
+            self::assertStringNotContainsString(str_repeat('b', 43), (string) $response->getContent());
+        } finally {
+            @unlink($workspace.'/.symsvel/project.json');
+            rmdir($workspace.'/backend');
+            rmdir($workspace.'/.symsvel');
+            rmdir($workspace);
+        }
+    }
+
 }
