@@ -54,4 +54,56 @@ final class TrustedBoOriginTest extends TestCase
         $request->headers->set('Origin', 'https://bo.example.test/path');
         self::assertFalse($origin->accepts($request));
     }
+
+    public function testDevAcceptsSetupLocalHttpAndPortsWithoutTrustingForeignOrigins(): void
+    {
+        $workspace = sys_get_temp_dir().'/symsvel-origin-http-'.bin2hex(random_bytes(6));
+        mkdir($workspace.'/.symsvel', 0700, true);
+        mkdir($workspace.'/backend', 0700);
+        try {
+            file_put_contents($workspace.'/.symsvel/project.json', '{"schema":1,"local_domain":"xt.localhost"}');
+            $dev = new TrustedBoOrigin($workspace.'/backend', null, 'dev');
+            $prod = new TrustedBoOrigin($workspace.'/backend', null, 'prod');
+            $request = Request::create('http://backend.xt.localhost/apibo/auth/browser/login', 'POST');
+
+            $request->headers->set('Origin', 'http://bo.xt.localhost');
+            self::assertTrue($dev->accepts($request));
+            self::assertTrue($dev->usesLocalHttpCookie($request));
+            self::assertFalse($prod->accepts($request));
+
+            $request->headers->set('Origin', 'http://bo.xt.localhost:5173');
+            self::assertTrue($dev->accepts($request));
+            $request->headers->set('Origin', 'https://bo.xt.localhost:5173');
+            self::assertTrue($dev->accepts($request));
+            self::assertFalse($dev->usesLocalHttpCookie($request));
+            self::assertFalse($prod->accepts($request));
+
+            foreach ([
+                'http://app.xt.localhost',
+                'http://bo.xt.localhost.evil.example',
+                'http://bo.xt.localhost/path',
+                'null',
+                'http://bo.xt.localhost:99999',
+            ] as $untrusted) {
+                $request->headers->set('Origin', $untrusted);
+                self::assertFalse($dev->accepts($request), $untrusted);
+            }
+
+            file_put_contents($workspace.'/.symsvel/project.json', '{"schema":1,"local_domain":"example.com"}');
+            $request->headers->set('Origin', 'http://bo.example.com');
+            self::assertFalse($dev->accepts($request));
+
+            file_put_contents($workspace.'/.symsvel/project.json', '{"schema":1,"local_domain":"xt.localhost"}');
+            $request->headers->set('Origin', 'http://bo.xt.localhost');
+            $secureRequest = Request::create('https://backend.xt.localhost/apibo/auth/browser/login', 'POST');
+            $secureRequest->headers->set('Origin', 'http://bo.xt.localhost');
+            self::assertFalse($dev->accepts($secureRequest));
+        } finally {
+            @unlink($workspace.'/.symsvel/project.json');
+            rmdir($workspace.'/backend');
+            rmdir($workspace.'/.symsvel');
+            rmdir($workspace);
+        }
+    }
+
 }
