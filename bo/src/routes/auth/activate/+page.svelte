@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { resolve } from '$app/paths';
-  import { ApiError, api } from '#lib/api/client';
-  import { uiLanguage } from '#lib/api/locales';
+  import { ApiError, api } from '$lib/api/client';
+  import { uiLanguage } from '$lib/api/locales';
   import {
     invitationActivationCopy, validInvitationToken, validInvitationPassword
-  } from '#lib/modules/auth/invitation';
+  } from '$lib/modules/auth/invitation';
 
   let token = $state<string | null>(null);
   let loaded = $state(false);

@@ -9,3 +9,7 @@ Le manifeste Auth déclare désormais le composant obligatoire BO, synchronisé 
 Le secret `?token=...` est extrait au chargement, strictement validé, puis effacé de la barre d'adresse et de l'historique avant toute action de l'utilisateur ; le formulaire le conserve uniquement en mémoire. Les mots de passe sont saisis deux fois et validés (12 à 1024 octets, sans octet nul). `POST /apibo/auth/invitation/complete` passe par `api(..., {public:true})` : **pas de Bearer, cookie, ni session enregistrée**. Le backend consomme le jeton, valide l'adresse et enregistre le mot de passe atomiquement, puis la vue dirige vers `/login`.
 
 Les textes FR/EN sont externalisés dans `bo/src/lib/modules/auth/invitation.ts`, comme les autres messages du BO. Aucun jeton n'est journalisé ni copié en stockage persistant. Les tests Vitest couvrent la validité du jeton, les mots de passe et l'i18n. Build Svelte assemblé et CT HTTP restent obligatoires.
+
+### Résolution des imports (16/11/2026)
+
+Les sources Svelte des modules utilisent l'alias **natif SvelteKit** `$lib` pour importer les clients et helpers du BO. L'alias `#lib` du relais de route reste généré par Tooling, mais ne résout pas les imports TypeScript directs dans les pages lors de `svelte-check`. La CI du BO assemblé couvre cette différence ; aucun changement n'est nécessaire dans la logique métier Auth ou Admins.
