@@ -37,6 +37,7 @@ use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\DbalEmailVerificationStore;
+use SymSvel\Module\Auth\Token\DbalAdminInvitationStore;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenIssuer;
@@ -73,6 +74,8 @@ final class AuthBundle extends AbstractBundle
         $builder->register(DbalPasswordResetStore::class, DbalPasswordResetStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(DbalEmailVerificationStore::class, DbalEmailVerificationStore::class)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+        $builder->register(DbalAdminInvitationStore::class, DbalAdminInvitationStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
 
         $builder->setAlias(TokenStore::class, DbalTokenStore::class);
