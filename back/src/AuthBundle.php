@@ -9,6 +9,7 @@ use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use SymSvel\Module\Auth\Controller\BoLoginController;
 use SymSvel\Module\Auth\Controller\AppAuthenticationController;
 use SymSvel\Module\Auth\Controller\AppEmailVerificationController;
+use SymSvel\Module\Auth\Controller\AppPasswordResetController;
 use SymSvel\Module\Auth\Controller\BoRefreshController;
 use SymSvel\Module\Auth\Controller\BoLogoutController;
 use SymSvel\Module\Auth\Controller\BoSessionController;
@@ -120,7 +121,7 @@ final class AuthBundle extends AbstractBundle
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
-        foreach ([BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
+        foreach ([BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
             $builder->register($controller, $controller)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');

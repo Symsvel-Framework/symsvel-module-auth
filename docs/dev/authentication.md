@@ -556,3 +556,11 @@ Le fichier PHPUnit inclut désormais `tests/Unit` à côté de `tests/Token`, su
 ### Réactivation de la suite Unit (16/11/2026)
 
 La correction de `back/phpunit.xml.dist` a révélé quatre assertions historiquement non exécutées. Deux utilisaient une identité d'objet `DateTimeImmutable` (`assertSame`) au lieu d'une comparaison des instants (`assertEquals`). Deux exigeaient le texte exact `Cache-Control: no-store`, alors que Symfony normalise parfois l'entête en `no-store, private` ; elles vérifient désormais la **directive de confidentialité effective** avec `hasCacheControlDirective('no-store')`. Aucun runtime, durée de token ni politique de cache n'a été affaibli.
+
+## Mot de passe oublié App (16/11/2026)
+
+`AppPasswordResetController` expose `POST /apiopen/auth/password-reset/request` avec `email` et `locale` FR/EN, et `POST /apiopen/auth/password-reset/complete` avec `token` et `password`. Aucun compte ni statut de vérification n'est dévoilé lors de la demande (réponse uniforme HTTP 202). Le service **déjà existant** `PasswordResetDispatch` applique son quota IP/identifiant, ne délivre un lien qu'à une adresse enregistrée et confirmée par Users, et utilise `auth.app_reset_url` fourni par Settings et le modèle Mails App.
+
+La confirmation utilise `PasswordResetCompletion('app', ...)` : consommation du jeton dédié, hachage Argon2id et révocation de toutes les sessions App du compte dans une transaction DBAL. Les entrées JSON sont limitées, le nouveau mot de passe doit contenir 12 à 1024 octets sans NUL, et les réponses sont non mises en cache. Le test du contrôleur vérifie chemins et requêtes malformées sans invoquer les services. `PasswordResetCompletion` refuse également explicitement l'octet nul avant le hachage pour les deux contextes.
+
+Le domaine/chemin cible doit être configuré par `auth.app_reset_url`, URL HTTPS sans paramètres. Le formulaire App, les tests de navigateur puis les CT réels restent à valider ; le transport HttpOnly fait toujours l'objet d'un chantier distinct.
