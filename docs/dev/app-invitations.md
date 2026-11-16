@@ -13,8 +13,9 @@ Le jeton de 256 bits est hashé, limité à une heure, lié à l'empreinte
 de l'adresse enregistrée et consommé en transaction DBAL.
 En cas de rejet du compte, la consommation est annulée.
 
-`auth.app_invitation_url` (Settings) est une URL HTTPS de confiance
-sans paramètres et ne provient jamais du navigateur BO. Le template
+Le lien d'invitation App est calculé par `AuthPageUrls` à partir du domaine
+publié par le Setup (`SYMSVEL_BO_DOMAIN`) et du chemin fixe `/activate`.
+Aucune URL d'activation n'est éditable dans Settings ni dérivée du navigateur BO. Le template
 `auth.app.user_invitation` comporte les langues FR/EN. L'activation App
 envoie `POST /apiopen/auth/invitation/complete` avec le jeton et
 le nouveau mot de passe (12 à 1024 octets, Argon2id côté propriétaire).

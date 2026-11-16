@@ -4,161 +4,85 @@ declare(strict_types=1);
 
 namespace SymSvel\Module\Auth\Tests\Unit;
 
-use Doctrine\DBAL\DriverManager;
-use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\ORMSetup;
-use Doctrine\ORM\Tools\SchemaTool;
-use Doctrine\Persistence\ManagerRegistry;
 use PHPUnit\Framework\TestCase;
+use SymSvel\Module\Auth\Service\AuthPageUrls;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
-use SymSvel\Module\Settings\Entity\Setting;
-use SymSvel\Module\Settings\Repository\SettingRepository;
-use SymSvel\Module\Settings\Service\SettingKeyQualifier;
-use SymSvel\Module\Settings\Service\SettingManager;
+use SymSvel\Module\Auth\Service\AdminInvitationUrlResolver;
+use SymSvel\Module\Auth\Service\AppInvitationUrlResolver;
 use SymSvel\Module\Settings\Service\SettingRegistry;
-use SymSvel\Module\Settings\Service\SettingSecretCipher;
+use SymSvel\Module\Settings\Service\SettingKeyQualifier;
 
 final class AuthSettingDefinitionProviderTest extends TestCase
 {
-    public function testOwnsFourNonPublicAndNonBlockingUrlSettings(): void
+    public function testAuthExposesNoMutableUrlSettings(): void
     {
         $registry = new SettingRegistry([]);
         $registry->registerOwned(new AuthSettingDefinitionProvider(), 'auth', new SettingKeyQualifier());
-        $definitions = $registry->all();
-        self::assertCount(5, $definitions);
-        $byKey = [];
-        foreach ($definitions as $definition) {
-            $byKey[$definition->key] = $definition;
-        }
-        foreach (['auth.bo_reset_url', 'auth.app_reset_url', 'auth.bo_verify_email_url', 'auth.bo_invitation_url', 'auth.app_invitation_url'] as $key) {
-            self::assertArrayHasKey($key, $byKey);
-            self::assertSame('url', $byKey[$key]->type);
-            self::assertFalse($byKey[$key]->public);
-            self::assertFalse($byKey[$key]->blocking);
-            self::assertFalse($byKey[$key]->required);
-        }
-        self::assertArrayNotHasKey('auth.app_verify_email_url', $byKey);
+        self::assertSame([], $registry->all());
     }
 
-    public function testResolverRejectsUnconfiguredAndUnsafeUrls(): void
+    public function testAllCallbackUrlsUseSetupPublishedDomainAndKnownRoutes(): void
     {
-        $settings = $this->settings();
-        $resolver = new PasswordResetUrlResolver($settings);
+        $pages = new AuthPageUrls('dev', 'xt.localhost');
+        self::assertSame('https://bo.xt.localhost/reset-password', (new PasswordResetUrlResolver($pages))->forContext('bo'));
+        self::assertSame('https://app.xt.localhost/reset-password', (new PasswordResetUrlResolver($pages))->forContext('app'));
+        self::assertSame('https://bo.xt.localhost/verify-email', (new EmailVerificationUrlResolver($pages))->forContext('bo'));
+        self::assertSame('https://app.xt.localhost/verify-email', (new EmailVerificationUrlResolver($pages))->forContext('app'));
+        self::assertSame('https://bo.xt.localhost/auth/activate', (new AdminInvitationUrlResolver($pages))->resolve());
+        self::assertSame('https://app.xt.localhost/activate', (new AppInvitationUrlResolver($pages))->resolve());
+    }
 
-        foreach (['bo', 'app'] as $context) {
+    public function testMissingOrUntrustedSetupDomainFailsClosed(): void
+    {
+        foreach ([null, 'evil.test/path', 'https://bad.test', 'UPPER.test', 'bad..test'] as $domain) {
+            $pages = new AuthPageUrls('prod', $domain ?? '');
             try {
-                $resolver->forContext($context);
-                self::fail('An unconfigured URL must be refused.');
+                $pages->forPage('bo', 'reset');
+                self::fail('Missing or malformed domain must be rejected.');
             } catch (\LogicException) {
             }
         }
-        $settings->set('auth.bo_reset_url', 'http://bo.example.test/reset');
-        $settings->flush();
+    }
+
+    public function testProductionCanUseExplicitDeploymentOriginsButNeverHttp(): void
+    {
+        $pages = new AuthPageUrls('prod', 'project.example.test',
+            'https://admin.example.org', 'https://portal.example.org');
+        self::assertSame('https://admin.example.org/auth/activate', $pages->forPage('bo', 'invitation'));
+        self::assertSame('https://portal.example.org/verify-email', $pages->forPage('app', 'verify'));
+
         $this->expectException(\LogicException::class);
-        $resolver->forContext('bo');
+        (new AuthPageUrls('prod', 'project.example.test', 'http://bo.project.example.test'))
+            ->forPage('bo', 'reset');
     }
 
-    public function testResolverUsesTrustedConfiguredUrlPerContext(): void
+    public function testLocalHttpIsExplicitOptInOnlyForSetupDomain(): void
     {
-        $settings = $this->settings();
-        $settings->set('auth.bo_reset_url', 'https://bo.example.test/reset');
-        $settings->set('auth.app_reset_url', 'https://app.example.test/reset');
-        $settings->flush();
-        $resolver = new PasswordResetUrlResolver($settings);
-        self::assertSame('https://bo.example.test/reset', $resolver->forContext('bo'));
-        self::assertSame('https://app.example.test/reset', $resolver->forContext('app'));
+        $pages = new AuthPageUrls('dev', 'xt.localhost', 'http://bo.xt.localhost:8000');
+        self::assertSame('http://bo.xt.localhost:8000/auth/activate', $pages->forPage('bo', 'invitation'));
+
+        $this->expectException(\LogicException::class);
+        (new AuthPageUrls('dev', 'xt.localhost', 'http://evil.test'))
+            ->forPage('bo', 'reset');
+    }
+
+    public function testRejectsHostInjectionAndUnknownPages(): void
+    {
         $this->expectException(\InvalidArgumentException::class);
-        $resolver->forContext('invalid');
+        (new AuthPageUrls('dev', 'xt.localhost'))->forPage('bo', 'unknown');
     }
 
-    public function testVerificationUrlResolverUsesSetupDomainForApp(): void
+    public function testRejectsOriginWithPathOrCredentials(): void
     {
-        $settings = $this->settings();
-        $workspace = sys_get_temp_dir().'/symsvel-auth-domain-'.bin2hex(random_bytes(8));
-        mkdir($workspace.'/.symsvel', 0700, true);
-        mkdir($workspace.'/backend', 0700);
-        $metadata = $workspace.'/.symsvel/project.json';
-
-        try {
-            $resolver = new EmailVerificationUrlResolver($settings, $workspace.'/backend');
+        foreach (['https://bo.xt.localhost/evil', 'https://user:pass@bo.xt.localhost',
+            'https://bo.xt.localhost?to=evil', 'javascript:alert(1)'] as $origin) {
             try {
-                $resolver->forContext('app');
-                self::fail('Missing Setup metadata must be rejected.');
+                (new AuthPageUrls('prod', 'xt.localhost', $origin))->forPage('bo', 'reset');
+                self::fail('Unsafe origin accepted: '.$origin);
             } catch (\LogicException) {
             }
-
-            file_put_contents($metadata, '{"schema":1,"local_domain":"xt.localhost"}');
-            self::assertSame('https://app.xt.localhost/verify-email', $resolver->forContext('app'));
-
-            $settings->set('auth.bo_verify_email_url', 'https://bo.example.test/confirm-email');
-            $settings->flush();
-            self::assertSame('https://bo.example.test/confirm-email', $resolver->forContext('bo'));
-
-            $settings->set('auth.bo_verify_email_url', 'https://bo.example.test/confirm-email?to=evil');
-            $settings->flush();
-            $this->expectException(\LogicException::class);
-            $resolver->forContext('bo');
-        } finally {
-            @unlink($metadata);
-            rmdir($workspace.'/backend');
-            rmdir($workspace.'/.symsvel');
-            rmdir($workspace);
         }
-    }
-
-    public function testVerificationUrlResolverRejectsInvalidSetupDomain(): void
-    {
-        $settings = $this->settings();
-        $workspace = sys_get_temp_dir().'/symsvel-auth-domain-'.bin2hex(random_bytes(8));
-        mkdir($workspace.'/.symsvel', 0700, true);
-        mkdir($workspace.'/backend', 0700);
-        $metadata = $workspace.'/.symsvel/project.json';
-
-        try {
-            $resolver = new EmailVerificationUrlResolver($settings, $workspace.'/backend');
-            foreach ([
-                '{"schema":1,"local_domain":"evil.test/path"}',
-                '{"schema":1,"local_domain":"UPPER.test"}',
-                '{"schema":1,"local_domain":"evil..test"}',
-                '{"schema":2,"local_domain":"xt.localhost"}',
-                '{"schema":1,"local_domain":"https://evil.test"}',
-                'not-json',
-            ] as $payload) {
-                file_put_contents($metadata, $payload);
-                try {
-                    $resolver->forContext('app');
-                    self::fail('Untrusted Setup metadata must be rejected.');
-                } catch (\LogicException) {
-                }
-            }
-        } finally {
-            @unlink($metadata);
-            rmdir($workspace.'/backend');
-            rmdir($workspace.'/.symsvel');
-            rmdir($workspace);
-        }
-    }
-
-    private function settings(): SettingManager
-    {
-        if (!extension_loaded('pdo_sqlite')) {
-            self::markTestSkipped('pdo_sqlite is required.');
-        }
-        $registry = new SettingRegistry([]);
-        $registry->registerOwned(new AuthSettingDefinitionProvider(), 'auth', new SettingKeyQualifier());
-        $config = ORMSetup::createAttributeMetadataConfiguration(
-            paths: [dirname((new \ReflectionClass(Setting::class))->getFileName())],
-            isDevMode: true,
-        );
-        $config->enableNativeLazyObjects(true);
-        $em = new EntityManager(DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]), $config);
-        (new SchemaTool($em))->createSchema([$em->getClassMetadata(Setting::class)]);
-        $doctrineRegistry = $this->createMock(ManagerRegistry::class);
-        $doctrineRegistry->method('getManagerForClass')->with(Setting::class)->willReturn($em);
-        return new SettingManager(
-            $registry, new SettingRepository($doctrineRegistry), $em, new SettingSecretCipher('unit-test-secret'),
-        );
     }
 }

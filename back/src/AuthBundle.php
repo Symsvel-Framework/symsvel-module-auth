@@ -42,6 +42,7 @@ use SymSvel\Module\Auth\Identity\PasswordResetDispatch;
 use SymSvel\Module\Auth\Identity\PasswordResetLimiter;
 use SymSvel\Module\Auth\Mail\AuthMailTemplateProvider;
 use SymSvel\Module\Auth\Service\AuthSettingDefinitionProvider;
+use SymSvel\Module\Auth\Service\AuthPageUrls;
 use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
 use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
 use SymSvel\Module\Auth\Service\AdminInvitationUrlResolver;
@@ -79,6 +80,8 @@ final class AuthBundle extends AbstractBundle
             ->addTag('symsvel.mails.template_provider');
         $builder->register(AuthSettingDefinitionProvider::class, AuthSettingDefinitionProvider::class)
             ->addTag('symsvel.settings.definition_provider');
+        $builder->register(AuthPageUrls::class, AuthPageUrls::class)
+            ->setAutowired(true);
         $builder->register(PasswordResetUrlResolver::class, PasswordResetUrlResolver::class)
             ->setAutowired(true);
         $builder->register(EmailVerificationUrlResolver::class, EmailVerificationUrlResolver::class)
