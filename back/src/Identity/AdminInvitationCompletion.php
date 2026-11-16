@@ -13,7 +13,7 @@ final readonly class AdminInvitationCompletion
     public function __construct(
         private Connection $connection,
         private DbalAdminInvitationStore $invitations,
-        private AdminInvitationIdentity $admins,
+        private AdminInvitationOwners $admins,
     ) {
     }
 
@@ -30,7 +30,7 @@ final readonly class AdminInvitationCompletion
                     return false;
                 }
                 $hash = password_hash($password, PASSWORD_ARGON2ID);
-                if (!$this->admins->activateInvitation($record['adminId'], $record['emailHash'], $hash, $now)) {
+                if (!$this->admins->activate($record['adminId'], $record['emailHash'], $hash, $now)) {
                     throw new AdminInvitationUnavailable();
                 }
 
