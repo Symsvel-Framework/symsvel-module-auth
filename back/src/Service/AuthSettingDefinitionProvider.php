@@ -28,13 +28,6 @@ final class AuthSettingDefinitionProvider implements SettingDefinitionProviderIn
             description: 'URL HTTPS de confirmation BO, sans paramètres de requête.',
         );
         yield new SettingDefinition(
-            key: 'app_verify_email_url',
-            label: 'URL de confirmation d’adresse e-mail App',
-            group: 'authentication',
-            type: 'url',
-            description: 'URL HTTPS de confirmation App, si App est installée.',
-        );
-        yield new SettingDefinition(
             key: 'bo_invitation_url',
             label: 'URL d’activation d’une invitation administrateur BO',
             group: 'authentication',

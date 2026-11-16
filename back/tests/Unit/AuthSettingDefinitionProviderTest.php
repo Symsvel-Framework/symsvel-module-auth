@@ -22,23 +22,24 @@ use SymSvel\Module\Settings\Service\SettingSecretCipher;
 
 final class AuthSettingDefinitionProviderTest extends TestCase
 {
-    public function testOwnsFiveNonPublicAndNonBlockingUrlSettings(): void
+    public function testOwnsFourNonPublicAndNonBlockingUrlSettings(): void
     {
         $registry = new SettingRegistry([]);
         $registry->registerOwned(new AuthSettingDefinitionProvider(), 'auth', new SettingKeyQualifier());
         $definitions = $registry->all();
-        self::assertCount(5, $definitions);
+        self::assertCount(4, $definitions);
         $byKey = [];
         foreach ($definitions as $definition) {
             $byKey[$definition->key] = $definition;
         }
-        foreach (['auth.bo_reset_url', 'auth.app_reset_url', 'auth.bo_verify_email_url', 'auth.app_verify_email_url', 'auth.bo_invitation_url'] as $key) {
+        foreach (['auth.bo_reset_url', 'auth.app_reset_url', 'auth.bo_verify_email_url', 'auth.bo_invitation_url'] as $key) {
             self::assertArrayHasKey($key, $byKey);
             self::assertSame('url', $byKey[$key]->type);
             self::assertFalse($byKey[$key]->public);
             self::assertFalse($byKey[$key]->blocking);
             self::assertFalse($byKey[$key]->required);
         }
+        self::assertArrayNotHasKey('auth.app_verify_email_url', $byKey);
     }
 
     public function testResolverRejectsUnconfiguredAndUnsafeUrls(): void
@@ -72,28 +73,72 @@ final class AuthSettingDefinitionProviderTest extends TestCase
         $resolver->forContext('invalid');
     }
 
-    public function testVerificationUrlResolverUsesTrustedContextSettings(): void
+    public function testVerificationUrlResolverUsesSetupDomainForApp(): void
     {
         $settings = $this->settings();
-        $resolver = new EmailVerificationUrlResolver($settings);
-        foreach (['bo', 'app'] as $context) {
+        $workspace = sys_get_temp_dir().'/symsvel-auth-domain-'.bin2hex(random_bytes(8));
+        mkdir($workspace.'/.symsvel', 0700, true);
+        mkdir($workspace.'/backend', 0700);
+        $metadata = $workspace.'/.symsvel/project.json';
+
+        try {
+            $resolver = new EmailVerificationUrlResolver($settings, $workspace.'/backend');
             try {
-                $resolver->forContext($context);
-                self::fail('Missing URL must be rejected.');
+                $resolver->forContext('app');
+                self::fail('Missing Setup metadata must be rejected.');
             } catch (\LogicException) {
             }
+
+            file_put_contents($metadata, '{"schema":1,"local_domain":"xt.localhost"}');
+            self::assertSame('https://app.xt.localhost/verify-email', $resolver->forContext('app'));
+
+            $settings->set('auth.bo_verify_email_url', 'https://bo.example.test/confirm-email');
+            $settings->flush();
+            self::assertSame('https://bo.example.test/confirm-email', $resolver->forContext('bo'));
+
+            $settings->set('auth.bo_verify_email_url', 'https://bo.example.test/confirm-email?to=evil');
+            $settings->flush();
+            $this->expectException(\LogicException::class);
+            $resolver->forContext('bo');
+        } finally {
+            @unlink($metadata);
+            rmdir($workspace.'/backend');
+            rmdir($workspace.'/.symsvel');
+            rmdir($workspace);
         }
+    }
 
-        $settings->set('auth.bo_verify_email_url', 'https://bo.example.test/confirm-email');
-        $settings->set('auth.app_verify_email_url', 'https://app.example.test/confirm-email');
-        $settings->flush();
-        self::assertSame('https://bo.example.test/confirm-email', $resolver->forContext('bo'));
-        self::assertSame('https://app.example.test/confirm-email', $resolver->forContext('app'));
+    public function testVerificationUrlResolverRejectsInvalidSetupDomain(): void
+    {
+        $settings = $this->settings();
+        $workspace = sys_get_temp_dir().'/symsvel-auth-domain-'.bin2hex(random_bytes(8));
+        mkdir($workspace.'/.symsvel', 0700, true);
+        mkdir($workspace.'/backend', 0700);
+        $metadata = $workspace.'/.symsvel/project.json';
 
-        $settings->set('auth.bo_verify_email_url', 'https://bo.example.test/confirm-email?to=evil');
-        $settings->flush();
-        $this->expectException(\LogicException::class);
-        $resolver->forContext('bo');
+        try {
+            $resolver = new EmailVerificationUrlResolver($settings, $workspace.'/backend');
+            foreach ([
+                '{"schema":1,"local_domain":"evil.test/path"}',
+                '{"schema":1,"local_domain":"UPPER.test"}',
+                '{"schema":1,"local_domain":"evil..test"}',
+                '{"schema":2,"local_domain":"xt.localhost"}',
+                '{"schema":1,"local_domain":"https://evil.test"}',
+                'not-json',
+            ] as $payload) {
+                file_put_contents($metadata, $payload);
+                try {
+                    $resolver->forContext('app');
+                    self::fail('Untrusted Setup metadata must be rejected.');
+                } catch (\LogicException) {
+                }
+            }
+        } finally {
+            @unlink($metadata);
+            rmdir($workspace.'/backend');
+            rmdir($workspace.'/.symsvel');
+            rmdir($workspace);
+        }
     }
 
     private function settings(): SettingManager

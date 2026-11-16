@@ -593,3 +593,10 @@ Les endpoints anonymes App de demande de confirmation (`/apiopen/auth/email-veri
 La logique de jetons, les quotas anti-abus et la non-vérification des comptes ne changent pas. Un jeton éventuellement persisté avant un échec de livraison reste inutilisable par un client qui ne l'a pas reçu et expire suivant sa politique ; un nouveau lien peut être demandé après expiration du quota. Les défauts d'infrastructure doivent être traités par les opérateurs à partir des logs, non par un message différenciant les comptes dans l'API publique.
 
 La CI PHP et le parcours d'intégration Users/App couvrent cette politique, sous réserve de validation CI puis de crash-tests SMTP réels. La matrice Auth multi-SGBD reste distinctement bloquée sur l'absence de `pdo_mysql` dans les runners et du secret `SYMSVEL_CI_POSTGRES_PASSWORD` dans le job PostgreSQL au 16/11/2026.
+
+## Domaine de confirmation App fourni par le Setup (CT XT du 16/11/2026)
+
+L'URL de confirmation App est désormais **dérivée**, et non configurable dans Settings. Le Setup enregistre déjà le domaine de base validé dans \`.symsvel/project.json\` à la racine du workspace (\`local_domain\`), distinct de \`backend/.symsvel/project.json\` qui stocke le canal dev/stable. Le résolveur construit uniquement \`https://app.<local_domain>/verify-email\` côté serveur. Ni l'en-tête Host ni une origine issue de la requête ne peuvent influencer le lien. Le HTTPS reste exigé et l'hébergement App doit correspondre au domaine local du Setup.
+
+Les métadonnées absentes, corrompues ou invalides provoquent un refus fermé et journalisé par les endpoints publics sans divulgation d'existence de compte. \`AuthSettingDefinitionProvider\` ne publie plus \`auth.app_verify_email_url\`. La résolution BO conserve, pour cette passe, \`auth.bo_verify_email_url\` et les URL de récupération/invitation restent inchangées. Tests unitaires de construction et de validation du domaine et parcours intégré Users adaptés. CI et CT SMTP réel requis avant clôture.
+

@@ -84,13 +84,13 @@ final class EmailVerificationDispatchTest extends TestCase
         self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_email_verification_tokens'));
     }
 
-    public function testMissingAppUrlPreventsSendingOrQuotaReservation(): void
+    public function testMissingSetupDomainPreventsSendingOrQuotaReservation(): void
     {
         [$dispatch, $db, $mailer] = $this->fixture(true);
         $mailer->expects(self::never())->method('send');
         try {
             $dispatch->dispatch('app', 'known', 'fr', '192.0.2.10', new \DateTimeImmutable());
-            self::fail('Missing App URL should be rejected.');
+            self::fail('Missing Setup domain should be rejected.');
         } catch (\LogicException) {
             self::assertSame(0, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_reset_limits'));
         }
@@ -167,7 +167,7 @@ final class EmailVerificationDispatchTest extends TestCase
         return [
             new EmailVerificationDispatch(
                 new PasswordResetLimiter($db, 'test-secret-at-least-16-characters'),
-                new EmailVerificationUrlResolver($settings),
+                new EmailVerificationUrlResolver($settings, sys_get_temp_dir().'/symsvel-auth-missing-project/backend'),
                 new ContextPasswordResetIdentity([$owner]),
                 new ContextEmailVerificationIdentity([$owner]), new DbalEmailVerificationStore($db),
                 $renderer, new ConfiguredMailSender(new MailSender($mailer), $settings),
