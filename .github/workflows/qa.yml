@@ -47,7 +47,7 @@ jobs:
       - name: Verify preinstalled PHP 8.4 and database drivers
         run: |
           php -v
-          php -r 'if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || !extension_loaded("pdo_pgsql") || !extension_loaded("pdo_mysql") || !extension_loaded("pdo_sqlite")) { exit(1); }'
+          php -r '$missing = array_values(array_filter(["pdo_pgsql", "pdo_mysql", "pdo_sqlite"], static fn (string $driver): bool => !extension_loaded($driver))); if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || $missing !== []) { fwrite(STDERR, "Unsupported PHP or missing drivers: ".implode(", ", $missing)."\\n"); exit(1); }'
       - name: Install private Composer dependencies
         env:
           SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}

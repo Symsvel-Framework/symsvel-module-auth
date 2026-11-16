@@ -574,3 +574,7 @@ Le test général valide PHP 8.4 et `pdo_sqlite` préinstallés. Pour la matrice
 Cette CI utilise les bases de tests locales et ne démontre pas à elle seule la compatibilité d'une installation SymSvel complète. Les crash-tests réels Postgres/MySQL/MariaDB/SQLite par l'utilisateur restent obligatoires. Si les runners Compose ou secrets ne sont pas disponibles, la CI échoue explicitement plutôt que de passer en mode dégradé.
 
 **Câblage du workflow :** les trois jobs (`test`, `database-matrix`, `bo-integration`) ciblent explicitement le runner local ; aucune cible `ubuntu-latest` résiduelle n'est conservée.
+
+### Diagnostic des extensions PHP sur le runner (16/11/2026)
+
+Les jobs de matrice ne passent pas la prévalidation des extensions PHP sur l'image du runner. Le précontrôle nomme désormais explicitement les pilotes `pdo_pgsql`, `pdo_mysql` ou `pdo_sqlite` manquants, sans masquer le problème par un skip. La prise en charge de ces pilotes dans l'image de build locale reste à vérifier avant de déclarer la matrice verte.
