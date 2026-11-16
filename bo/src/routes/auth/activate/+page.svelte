@@ -1,0 +1,88 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { resolve } from '$app/paths';
+  import { ApiError, api } from '#lib/api/client';
+  import { uiLanguage } from '#lib/api/locales';
+  import {
+    invitationActivationCopy, validInvitationToken, validInvitationPassword
+  } from '#lib/modules/auth/invitation';
+
+  let token = $state<string | null>(null);
+  let loaded = $state(false);
+  let completed = $state(false);
+  let busy = $state(false);
+  let password = $state('');
+  let confirmation = $state('');
+  let error = $state('');
+  const language = $derived($uiLanguage ?? (typeof navigator === 'undefined' ? 'en' : navigator.language));
+  const t = $derived(invitationActivationCopy(language));
+
+  onMount(() => {
+    const candidate = new URLSearchParams(window.location.search).get('token');
+    token = validInvitationToken(candidate) ? candidate : null;
+    // The link is a one-time secret; avoid exposing it in navigation history and referrers.
+    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.hash);
+    loaded = true;
+  });
+
+  async function activate(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    if (busy || !token) return;
+    error = '';
+    if (password !== confirmation) {
+      error = t.mismatch;
+      return;
+    }
+    if (!validInvitationPassword(password)) {
+      error = t.invalidPassword;
+      return;
+    }
+    busy = true;
+    try {
+      await api<{ status: 'completed' }>('/apibo/auth/invitation/complete', {
+        method: 'POST',
+        public: true,
+        body: JSON.stringify({ token, password })
+      });
+      completed = true;
+      token = null;
+      password = '';
+      confirmation = '';
+    } catch (cause) {
+      error = cause instanceof ApiError && cause.status === 400 ? t.expired : t.failure;
+    } finally {
+      busy = false;
+    }
+  }
+</script>
+
+<svelte:head>
+  <title>{t.title} | SymSvel BO</title>
+  <meta name="referrer" content="no-referrer" />
+</svelte:head>
+
+<main class="auth-shell">
+  <section class="auth-card" aria-labelledby="invitation-activation-title">
+    <header><strong>SymSvel</strong><span>BO</span></header>
+    <h1 id="invitation-activation-title">{t.title}</h1>
+    {#if completed}
+      <p role="status">{t.done}</p>
+      <p><a href={resolve('/login')}>{t.login}</a></p>
+    {:else if loaded && !token}
+      <p class="alert" role="alert">{t.invalidToken}</p>
+    {:else if loaded}
+      <p>{t.introduction}</p>
+      {#if error}<p class="alert" role="alert">{error}</p>{/if}
+      <form class="form" onsubmit={activate}>
+        <label for="invitation-password">{t.password}</label>
+        <input id="invitation-password" type="password" autocomplete="new-password"
+          bind:value={password} minlength="12" maxlength="1024" required />
+        <small>{t.minimum}</small>
+        <label for="invitation-confirm">{t.confirmation}</label>
+        <input id="invitation-confirm" type="password" autocomplete="new-password"
+          bind:value={confirmation} minlength="12" maxlength="1024" required />
+        <button type="submit" disabled={busy}>{busy ? t.busy : t.submit}</button>
+      </form>
+    {/if}
+  </section>
+</main>

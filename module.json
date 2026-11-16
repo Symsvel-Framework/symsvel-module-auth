@@ -13,7 +13,8 @@
         "symsvel_auth_admin_invitations"
     ],
     "components": {
-        "back": "back"
+        "back": "back",
+        "bo": "bo"
     },
     "documentation": {
         "dev": "docs/dev",
