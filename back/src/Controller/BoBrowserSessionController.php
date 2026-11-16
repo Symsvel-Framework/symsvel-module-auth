@@ -17,11 +17,13 @@ use SymSvel\Module\Auth\Token\TokenRotation;
 
 /**
  * Browser-only BO transport. Only the short-lived access token reaches JS;
- * refresh secrets stay in a Secure HttpOnly SameSite=Strict host-only cookie.
+ * refresh secrets stay in a HttpOnly SameSite=Strict host-only cookie.
+ * Only local HTTP in dev uses a non-Secure, non-__Host cookie.
  */
 final readonly class BoBrowserSessionController
 {
-    private const COOKIE = '__Host-symsvel-bo-refresh';
+    private const COOKIE_HTTPS = '__Host-symsvel-bo-refresh';
+    private const COOKIE_LOCAL = 'symsvel-bo-refresh-local';
 
     public function __construct(
         private TrustedBoOrigin $origin,
@@ -47,7 +49,7 @@ final readonly class BoBrowserSessionController
             'bo', $payload['email'], $payload['password'],
             new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
         );
-        return $pair === null ? self::error(401, 'invalid_credentials') : self::pairResponse($pair);
+        return $pair === null ? self::error(401, 'invalid_credentials') : $this->pairResponse($pair, $request);
     }
 
     #[Route('/apibo/auth/browser/refresh', name: 'symsvel_auth_browser_refresh', methods: ['POST'], format: 'json')]
@@ -56,15 +58,15 @@ final readonly class BoBrowserSessionController
         if (!$this->origin->accepts($request)) {
             return self::error(403, 'forbidden');
         }
-        $secret = $request->cookies->get(self::COOKIE);
+        $secret = $request->cookies->get($this->cookieName($request));
         if (!is_string($secret) || !preg_match('/^[A-Za-z0-9_-]{43}$/D', $secret)) {
-            return self::forget(self::error(401, 'invalid_session'));
+            return $this->forget(self::error(401, 'invalid_session'), $request);
         }
         $result = $this->rotation->rotate($secret, 'bo', new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
         if ($result->decision !== RefreshDecision::Rotate || $result->pair === null) {
-            return self::forget(self::error(401, 'invalid_session'));
+            return $this->forget(self::error(401, 'invalid_session'), $request);
         }
-        return self::pairResponse($result->pair);
+        return $this->pairResponse($result->pair, $request);
     }
 
     #[Route('/apibo/auth/browser/logout', name: 'symsvel_auth_browser_logout', methods: ['POST'], format: 'json')]
@@ -73,37 +75,43 @@ final readonly class BoBrowserSessionController
         if (!$this->origin->accepts($request)) {
             return self::error(403, 'forbidden');
         }
-        $secret = $request->cookies->get(self::COOKIE);
+        $secret = $request->cookies->get($this->cookieName($request));
         if (is_string($secret) && preg_match('/^[A-Za-z0-9_-]{43}$/D', $secret)) {
             $this->logout->logout($secret, 'bo', new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
         }
-        return self::forget(self::response([], 204));
+        return $this->forget(self::response([], 204), $request);
     }
 
-    private static function pairResponse(TokenPair $pair): JsonResponse
+    private function pairResponse(TokenPair $pair, Request $request): JsonResponse
     {
         $response = self::response([
             'access_token' => $pair->access->raw,
             'expires_at' => $pair->access->expiresAt->format(\DateTimeInterface::ATOM),
             'token_type' => 'Bearer',
         ]);
-        $response->headers->setCookie(self::cookie($pair->refresh->raw, $pair->refresh->expiresAt));
+        $response->headers->setCookie($this->cookie($pair->refresh->raw, $pair->refresh->expiresAt, $request));
         return $response;
     }
 
-    private static function forget(JsonResponse $response): JsonResponse
+    private function forget(JsonResponse $response, Request $request): JsonResponse
     {
-        $response->headers->setCookie(self::cookie('', new \DateTimeImmutable('@1')));
+        $response->headers->setCookie($this->cookie('', new \DateTimeImmutable('@1'), $request));
         return $response;
     }
 
-    private static function cookie(string $value, \DateTimeImmutable $expiry): Cookie
+    private function cookieName(Request $request): string
     {
-        return Cookie::create(self::COOKIE)
+        return $this->origin->usesLocalHttpCookie($request) ? self::COOKIE_LOCAL : self::COOKIE_HTTPS;
+    }
+
+    private function cookie(string $value, \DateTimeImmutable $expiry, Request $request): Cookie
+    {
+        $localHttp = $this->origin->usesLocalHttpCookie($request);
+        return Cookie::create($this->cookieName($request))
             ->withValue($value)
             ->withExpires($expiry)
             ->withPath('/')
-            ->withSecure(true)
+            ->withSecure(!$localHttp)
             ->withHttpOnly(true)
             ->withSameSite(Cookie::SAMESITE_STRICT);
     }
