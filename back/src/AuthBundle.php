@@ -20,6 +20,8 @@ use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
+use SymSvel\Module\Auth\Identity\AdminInvitationIdentity;
+use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
 use SymSvel\Module\Auth\Identity\EmailVerificationDispatch;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Identity\PrincipalStatus;
@@ -91,6 +93,11 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.password_reset_identity'));
         $builder->register(ContextEmailVerificationIdentity::class, ContextEmailVerificationIdentity::class)
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.email_verification_identity'));
+        $builder->register(AdminInvitationCompletion::class, AdminInvitationCompletion::class)
+            ->setAutowired(true)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+        $builder->register(AdminInvitationIdentity::class, AdminInvitationIdentity::class)
+            ->setAutowired(true);
         $builder->register(EmailVerificationCompletion::class, EmailVerificationCompletion::class)
             ->setAutowired(true)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
