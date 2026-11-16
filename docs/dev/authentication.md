@@ -535,3 +535,15 @@ Le paramètre privé `auth.bo_invitation_url` définit l'adresse HTTPS de la pag
 Auth déclare maintenant un scope `bo` dans `module.json` afin que Tooling synchronise la route `/auth/activate` et ses helpers TS. La page Svelte locale traite le jeton éphémère de l'URL, l'efface immédiatement de l'historique, demande une confirmation du nouveau mot de passe et appelle **publiquement et sans credentials** `POST /apibo/auth/invitation/complete`. Le succès ne crée pas automatiquement une session et propose le retour vers `/login`. Le choix de la langue se fonde sur la langue d'interface BO avec textes FR/EN externalisés. Le paramètre `auth.bo_invitation_url` doit cibler exactement cette page HTTPS, sans query string (exemple `https://bo.exemple.test/auth/activate`).
 
 Tests unitaires Svelte/TS du jeton et du mot de passe définis dans `bo/tests/auth.test.ts`. Le scope BO est obligatoire car le BO fait partie de tout projet SymSvel ; App n'est pas rendue obligatoire. Les parcours d'inscription et de confirmation App restent distincts. À vérifier : CI du BO assemblé, URL configurée côté Settings, CORS, délivrance réelle du mail, activation avec migrations multi-SGBD et crash-tests locaux utilisateur.
+
+## API Auth du parcours App (16/11/2026)
+
+Pour une installation avec App/Users, Auth expose un ensemble distinct des routes BO :
+- `POST /apiopen/auth/login` et `POST /apiopen/auth/refresh` pour la connexion et la rotation (contexte **app** exclusivement) ;
+- `GET /api/auth/me`, `POST /api/auth/logout` pour les sessions authentifiées (bearer App, pas de session BO acceptée) ;
+- `POST /apiopen/auth/email-verification/request` (envoi/renvoi avec réponse uniforme HTTP 202, mécanisme anti-abus existant) ;
+- `POST /apiopen/auth/email-verification/complete` (consommation transactionnelle du jeton dédié et vérification de l'adresse actuelle).
+
+Les contrôleurs `AppAuthenticationController` et `AppEmailVerificationController` délèguent aux services existants `PasswordLogin`, `TokenRotation`, `AuthenticatedTokenResolver`, `EmailVerificationDispatch` et `EmailVerificationCompletion`. `ContextSessionLogout` mutualise la révocation transactionnelle BO/App ; `BoSessionLogout` conserve son interface publique historique. Les tokens et leurs empreintes restent séparés par contexte. La connexion est refusée si Users ne fournit pas un compte actif et vérifié. Aucune exigence Users n'est ajoutée aux installations BO seules.
+
+`PasswordResetLimiter::allowRegistration` réserve un namespace de quotas propre à l'inscription publique App. Les routes d'inscription et la persistance appartiennent à Users et non à Auth. Les réponses d'API sont `no-store` ; les points de délivrance ne révèlent pas l'existence d'une adresse. Limites : contrôles CSRF/CORS, transport final HttpOnly, tests sur projet assemblé et CT à valider.

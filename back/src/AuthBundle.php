@@ -7,6 +7,8 @@ namespace SymSvel\Module\Auth;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Argument\TaggedIteratorArgument;
 use SymSvel\Module\Auth\Controller\BoLoginController;
+use SymSvel\Module\Auth\Controller\AppAuthenticationController;
+use SymSvel\Module\Auth\Controller\AppEmailVerificationController;
 use SymSvel\Module\Auth\Controller\BoRefreshController;
 use SymSvel\Module\Auth\Controller\BoLogoutController;
 use SymSvel\Module\Auth\Controller\BoSessionController;
@@ -38,6 +40,7 @@ use SymSvel\Module\Auth\Service\EmailVerificationUrlResolver;
 use SymSvel\Module\Auth\Service\AdminInvitationUrlResolver;
 use SymSvel\Module\Auth\Token\AccessTokenLookup;
 use SymSvel\Module\Auth\Token\BoSessionLogout;
+use SymSvel\Module\Auth\Token\ContextSessionLogout;
 use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
@@ -90,6 +93,8 @@ final class AuthBundle extends AbstractBundle
 
         $builder->register(BoSessionLogout::class, BoSessionLogout::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+        $builder->register(ContextSessionLogout::class, ContextSessionLogout::class)
+            ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
 
         $builder->register(ContextIdentityProvider::class, ContextIdentityProvider::class)
             ->setAutowired(true)
@@ -115,7 +120,7 @@ final class AuthBundle extends AbstractBundle
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
 
-        foreach ([BoLoginController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
+        foreach ([BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class] as $controller) {
             $builder->register($controller, $controller)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');

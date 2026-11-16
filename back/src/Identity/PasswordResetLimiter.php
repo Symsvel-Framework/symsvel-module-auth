@@ -34,6 +34,12 @@ final readonly class PasswordResetLimiter
         return $this->reserveRequest($context, $identifier, $clientIp, $now, 'verify_id', 'verify_ip');
     }
 
+    /** Dedicated quota for public account registrations. */
+    public function allowRegistration(string $identifier, string $clientIp, \DateTimeImmutable $now): bool
+    {
+        return $this->reserveRequest('app', $identifier, $clientIp, $now, 'register_id', 'register_ip');
+    }
+
     private function reserveRequest(
         string $context, string $identifier, string $clientIp, \DateTimeImmutable $now,
         string $identifierScope, string $ipScope,
