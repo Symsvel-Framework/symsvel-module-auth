@@ -69,3 +69,7 @@ contexte concerné. En production, ce cas ne nécessite pas de recopier
 obligatoire si le contexte n'a aucune origine explicite et pour
 valider les dérogations HTTP de développement. La configuration
 continue de refuser chemins, credentials et query strings.
+
+## Fallback des libellés BO (17/11/2026)
+
+Les libellés français sont la valeur de repli lorsque la langue d'interface n'a pas encore de traduction disponible ; l'anglais reste servi pour `en`. Les codes ISO enregistrés en base ne changent pas. Cette correction ne crée pas d'éditeur de traductions ni de lecteur de fichiers dynamiques ; le déploiement d'un tel mécanisme relève du chantier i18n dédié. Tests FR, EN et locale non traduite ajoutés ; CI et crash-test local à confirmer.
