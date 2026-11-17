@@ -18,6 +18,25 @@ final readonly class TokenIssuer
     ) {
     }
 
+    /**
+     * The interactive caller verifies an optional factor inside the SAME
+     * transaction as session issuance. A false guard commits rate-limit and
+     * challenge-attempt counters but never creates access/refresh tokens.
+     *
+     * @param callable(): bool $verifiedGuard
+     */
+    public function issueWhen(TokenSubject $subject, \DateTimeImmutable $now, callable $verifiedGuard): ?TokenPair
+    {
+        return $this->store->transaction(function () use ($subject, $now, $verifiedGuard): ?TokenPair {
+            if ($verifiedGuard() !== true) {
+                return null;
+            }
+            $pair = $this->factory->issue($subject->context, null, $now);
+            $this->store->savePair($subject, $pair, $now);
+            return $pair;
+        });
+    }
+
     public function issue(TokenSubject $subject, \DateTimeImmutable $now): TokenPair
     {
         return $this->store->transaction(function () use ($subject, $now): TokenPair {
