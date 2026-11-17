@@ -49,5 +49,5 @@ const messages = {
 };
 export type InvitationActivationCopy = typeof messages.fr;
 export function invitationActivationCopy(language: string | null): InvitationActivationCopy {
-  return language?.toLowerCase().split('-')[0] === 'fr' ? messages.fr : messages.en;
+  return language?.toLowerCase().split('-')[0] === 'en' ? messages.en : messages.fr;
 }
