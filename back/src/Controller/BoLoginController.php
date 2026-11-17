@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
+use SymSvel\Module\Auth\Identity\SecondFactorChallenge;
 
 /**
  * BO password login. Token transport and browser session wiring are separate steps.
@@ -37,6 +38,12 @@ final readonly class BoLoginController
         }
 
         $pair = $this->login->login('bo', $payload['email'], $payload['password'], new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
+        if ($pair instanceof SecondFactorChallenge) {
+            $response = new JsonResponse($pair->response(), 202);
+            $response->headers->set('Cache-Control', 'no-store');
+            $response->headers->set('Pragma', 'no-cache');
+            return $response;
+        }
         if ($pair === null) {
             return new JsonResponse(['error' => ['code' => 'invalid_credentials', 'message' => 'Invalid credentials.']], 401);
         }
