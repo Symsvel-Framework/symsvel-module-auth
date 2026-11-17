@@ -363,7 +363,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
         $pair = $login->login('app', 'admin@example.test', 'correct-password', $now);
         self::assertNotNull($pair);
         self::assertSame(17, $resolver->resolve($pair->access->raw, 'app', $now)?->id);
-        self::assertNull($resolver->resolve($pair->access->raw, 'app', $now));
+        self::assertNull($resolver->resolve($pair->access->raw, 'bo', $now));
         self::assertSame(1, $provider->statusCalls);
 
         $provider->enabled = false;
