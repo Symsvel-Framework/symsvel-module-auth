@@ -13,4 +13,7 @@ use SymSvel\Module\Auth\Token\TokenSubject;
 interface LoginSecondFactorInterface
 {
     public function begin(TokenSubject $subject, \DateTimeImmutable $now): ?SecondFactorChallenge;
+
+    /** Verify a single-use challenge before issuing an Auth session. */
+    public function complete(string $context, string $challenge, string $code, \DateTimeImmutable $now): ?SecondFactorVerified;
 }
