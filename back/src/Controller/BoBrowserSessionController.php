@@ -51,7 +51,13 @@ final readonly class BoBrowserSessionController
             new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
         );
         if ($pair instanceof SecondFactorChallenge) {
-            return self::response($pair->response(), 202);
+            // A previously authenticated browser must not retain an older
+            // refresh cookie while a new login is awaiting a second factor.
+            $previous = $request->cookies->get($this->cookieName($request));
+            if (is_string($previous) && preg_match('/^[A-Za-z0-9_-]{43}$/D', $previous)) {
+                $this->logout->logout($previous, 'bo', new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
+            }
+            return $this->forget(self::response($pair->response(), 202), $request);
         }
         return $pair === null ? self::error(401, 'invalid_credentials') : $this->pairResponse($pair, $request);
     }
