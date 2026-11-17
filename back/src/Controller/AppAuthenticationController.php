@@ -47,6 +47,26 @@ final readonly class AppAuthenticationController
             : self::answer(self::tokens($pair));
     }
 
+    #[Route('/apiopen/auth/second-factor', name: 'symsvel_auth_app_second_factor', methods: ['POST'], format: 'json')]
+    public function secondFactor(Request $request): JsonResponse
+    {
+        $payload = self::json($request);
+        if ($payload instanceof JsonResponse) {
+            return $payload;
+        }
+        if (!is_string($payload['challenge'] ?? null) || !is_string($payload['code'] ?? null)) {
+            return self::answer(['error' => ['code' => 'invalid_request']], 400);
+        }
+        $verified = $this->login->completeSecondFactor('app', $payload['challenge'],
+            $payload['code'], new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
+        return $verified === null
+            ? self::answer(['error' => ['code' => 'invalid_second_factor']], 401)
+            : self::answer([
+                ...self::tokens($verified->tokens),
+                ...($verified->recoveryCodes !== [] ? ['recovery_codes' => $verified->recoveryCodes] : []),
+            ]);
+    }
+
     #[Route('/apiopen/auth/refresh', name: 'symsvel_auth_app_refresh', methods: ['POST'], format: 'json')]
     public function refresh(Request $request): JsonResponse
     {
