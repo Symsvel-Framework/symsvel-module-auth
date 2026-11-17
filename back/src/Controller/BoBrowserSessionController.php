@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use SymSvel\Module\Auth\Browser\TrustedBoOrigin;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
+use SymSvel\Module\Auth\Identity\SecondFactorChallenge;
 use SymSvel\Module\Auth\Token\RefreshDecision;
 use SymSvel\Module\Auth\Token\TokenLogout;
 use SymSvel\Module\Auth\Token\TokenPair;
@@ -49,7 +50,29 @@ final readonly class BoBrowserSessionController
             'bo', $payload['email'], $payload['password'],
             new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
         );
+        if ($pair instanceof SecondFactorChallenge) {
+            return self::response($pair->response(), 202);
+        }
         return $pair === null ? self::error(401, 'invalid_credentials') : $this->pairResponse($pair, $request);
+    }
+
+    #[Route('/apibo/auth/browser/second-factor', name: 'symsvel_auth_browser_second_factor', methods: ['POST'], format: 'json')]
+    public function secondFactor(Request $request): JsonResponse
+    {
+        if (!$this->origin->accepts($request)) {
+            return self::error(403, 'forbidden');
+        }
+        $payload = self::json($request);
+        if ($payload === null || !is_string($payload['challenge'] ?? null)
+            || !is_string($payload['code'] ?? null)) {
+            return self::error(400, 'invalid_request');
+        }
+        $verified = $this->login->completeSecondFactor('bo', $payload['challenge'],
+            $payload['code'], new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
+        if ($verified === null) {
+            return self::error(401, 'invalid_second_factor');
+        }
+        return $this->pairResponse($verified->tokens, $request, $verified->recoveryCodes);
     }
 
     #[Route('/apibo/auth/browser/refresh', name: 'symsvel_auth_browser_refresh', methods: ['POST'], format: 'json')]
@@ -82,9 +105,10 @@ final readonly class BoBrowserSessionController
         return $this->forget(self::response([], 204), $request);
     }
 
-    private function pairResponse(TokenPair $pair, Request $request): JsonResponse
+    private function pairResponse(TokenPair $pair, Request $request, array $recoveryCodes = []): JsonResponse
     {
         $response = self::response([
+            ...($recoveryCodes !== [] ? ['recovery_codes' => $recoveryCodes] : []),
             'access_token' => $pair->access->raw,
             'expires_at' => $pair->access->expiresAt->format(\DateTimeInterface::ATOM),
             'token_type' => 'Bearer',
