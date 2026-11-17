@@ -6,6 +6,9 @@ namespace SymSvel\Module\Auth\Tests\Token;
 
 use PHPUnit\Framework\TestCase;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
+use SymSvel\Module\Auth\Identity\LoginSecondFactorInterface;
+use SymSvel\Module\Auth\Identity\SecondFactorChallenge;
+use SymSvel\Module\Auth\Identity\SecondFactorVerified;
 use SymSvel\Module\Auth\Identity\PasswordPrincipal;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenIssuer;
@@ -47,4 +50,55 @@ final class PasswordLoginTest extends TestCase
         self::assertSame(1, $store->transactions);
         self::assertSame(['save'], $store->operations);
     }
+    public function testOptionalSecondFactorBlocksSessionUntilVerified(): void
+    {
+        $principal = new class implements PasswordPrincipal {
+            public function authenticate(string $context, string $identifier, string $password): ?TokenSubject
+            {
+                return $password === 'valid' ? new TokenSubject('bo', 17) : null;
+            }
+        };
+        $provider = new class implements LoginSecondFactorInterface {
+            public int $begins = 0;
+            public function begin(TokenSubject $subject, \DateTimeImmutable $now): ?SecondFactorChallenge
+            {
+                ++$this->begins;
+                return new SecondFactorChallenge(str_repeat('A', 43), $now->modify('+5 minutes'));
+            }
+            public function complete(string $context, string $challenge, string $code, \DateTimeImmutable $now): ?SecondFactorVerified
+            {
+                return null;
+            }
+        };
+
+        $store = new InMemoryTokenStore();
+        $login = new PasswordLogin($principal, new TokenIssuer($store, new TokenFactory()), [$provider]);
+        $now = new \DateTimeImmutable('2026-11-17T10:00:00+00:00');
+        self::assertNull($login->login('bo', 'admin@example.test', 'wrong', $now));
+        self::assertSame(0, $provider->begins);
+
+        $result = $login->login('bo', 'admin@example.test', 'valid', $now);
+        self::assertInstanceOf(SecondFactorChallenge::class, $result);
+        self::assertSame(1, $provider->begins);
+        self::assertSame(0, $store->transactions);
+        self::assertSame([], $store->operations);
+        self::assertTrue($result->response()['second_factor_required']);
+        self::assertNull($login->completeSecondFactor('bo', $result->challenge, '123456', $now));
+        self::assertSame(0, $store->transactions);
+    }
+
+    public function testDuplicateSecondFactorProvidersAreRejected(): void
+    {
+        $provider = new class implements LoginSecondFactorInterface {
+            public function begin(TokenSubject $subject, \DateTimeImmutable $now): ?SecondFactorChallenge { return null; }
+            public function complete(string $context, string $challenge, string $code, \DateTimeImmutable $now): ?SecondFactorVerified { return null; }
+        };
+        $principal = new class implements PasswordPrincipal {
+            public function authenticate(string $context, string $identifier, string $password): ?TokenSubject { return null; }
+        };
+        $this->expectException(\LogicException::class);
+        new PasswordLogin($principal, new TokenIssuer(new InMemoryTokenStore(), new TokenFactory()),
+            [$provider, $provider]);
+    }
+
 }
