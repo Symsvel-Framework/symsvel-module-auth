@@ -35,6 +35,17 @@ final readonly class PasswordLogin
         $this->secondFactors = $providers;
     }
 
+    public function completeSecondFactor(string $context, string $challenge, string $code, \DateTimeImmutable $now): ?SecondFactorVerified
+    {
+        if (!in_array($context, ['bo', 'app'], true)) {
+            return null;
+        }
+        foreach ($this->secondFactors as $factor) {
+            return $factor->complete($context, $challenge, $code, $now);
+        }
+        return null;
+    }
+
     public function login(string $context, string $identifier, string $password, \DateTimeImmutable $now): TokenPair|SecondFactorChallenge|null
     {
         if (!in_array($context, ['bo', 'app'], true)) {
