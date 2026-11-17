@@ -2,7 +2,7 @@
 
 ## Périmètre
 
-Auth est un module Back unique, pour deux contextes indépendants : `bo` (obligatoire) et `app` (uniquement si App installée). Il ne contient pas d'écran Svelte. Roles et ACLs restent responsables des permissions. La 2FA est un module séparé et facultatif.
+Auth est un module Back unique, pour deux contextes indépendants : `bo` (obligatoire) et `app` (uniquement si App installée). Il ne contient pas d'écran Svelte. Roles et ACLs restent responsables des permissions. La 2FA est un module séparé, **natif et obligatoire pour les nouvelles sessions BO** ; elle reste facultative côté App.
 
 ## Héritage XCore
 
@@ -644,11 +644,11 @@ La valeur de domaine est validée et ne contient ni schéma, ni port, ni chemin.
 Régressions couvertes : contrôle d'origine avec domaine runtime sans aucun fichier projet accessible, détection du domaine depuis l'environnement, refus en absence d'une valeur valide, HTTP loopback dev, refus d'origine distante et des domaines étrangers, refus de l'override malformé. Validation finale sur XT : formulaire BO, appel navigateur login, présence du cookie, rechargement, logout, et absence de lien CRUD sans autorisation.
 
 
-## Point d'extension facultatif 2FA (17/11/2026)
+## Second facteur obligatoire BO et configurable App (17/11/2026)
 
-`PasswordLogin` accepte désormais au plus un provider tagué `symsvel.auth.second_factor` implémentant `LoginSecondFactorInterface`. Le provider ne s'exécute **qu'après** validation du mot de passe et du contexte, et avant tout appel à `TokenIssuer`. S'il renvoie `SecondFactorChallenge`, les contrôleurs BO/App répondent HTTP 202, sans émettre de session complète. Si aucun provider n'est installé, la connexion historique fonctionne sans changement.
+`PasswordLogin` accepte désormais au plus un provider tagué `symsvel.auth.second_factor` implémentant `LoginSecondFactorInterface`. Le provider ne s'exécute **qu'après** validation du mot de passe et du contexte, et avant tout appel à `TokenIssuer`. S'il renvoie `SecondFactorChallenge`, les contrôleurs BO/App répondent HTTP 202, sans émettre de session complète. Si aucun provider n'est enregistré, seule la connexion App sans 2FA configurée peut suivre le parcours historique ; une connexion BO échoue explicitement sans émettre de tokens. De même, si un provider renvoie `null` sur BO au lieu d'un challenge, l'émission de session est interdite (fail closed).
 
-Le module optionnel `symsvel-framework/module-two-factor` fournit ce provider. La saisie du facteur est validée par `PasswordLogin::completeSecondFactor`, qui délègue au provider et ne crée pas lui-même de tokens. L'émission n'est permise que par le garde transactionnel `TokenIssuer::issueWhen(subject, now, verifiedGuard)`. Le garde retourne true seulement après consommation atomique du challenge et vérification du TOTP ou d'un code de secours. Le stockage des tentatives et des facteurs appartient au module optionnel, pas à Auth.
+Le module natif `symsvel-framework/module-two-factor`, automatiquement installé avec le BO, fournit ce provider. La politique BO est permanente : aucun setting ne peut la désactiver. L'App conserve `two-factor.app_required` et la protection des comptes déjà enrôlés. La saisie du facteur est validée par `PasswordLogin::completeSecondFactor`, qui délègue au provider et ne crée pas lui-même de tokens. L'émission n'est permise que par le garde transactionnel `TokenIssuer::issueWhen(subject, now, verifiedGuard)`. Le garde retourne true seulement après consommation atomique du challenge et vérification du TOTP ou d'un code de secours. Le stockage des tentatives et des facteurs appartient au module optionnel, pas à Auth.
 
 **Particularité SQLite :** `DbalTokenStore` refuse les transactions imbriquées. Le garde `issueWhen` utilise donc le store Auth comme propriétaire de la transaction externe, à laquelle le provider participe. L'émission d'access/refresh et la consommation du challenge sont atomiques ; un garde false peut valider les compteurs d'essais sans créer de tokens. Les autres points de création de sessions interactives, notamment les futurs fournisseurs OIDC, devront impérativement passer par ce contrôle. Aucun contournement par `TokenIssuer::issue` depuis un nouveau parcours interactif ne doit être autorisé.
 
@@ -660,3 +660,9 @@ Le test final exige les quatre SGBD, l'installation BO seul, la compilation du f
 ### Cookie BO préexistant lors d'un challenge (17/11/2026)
 
 Lorsqu'une nouvelle connexion BO exige une 2FA, `BoBrowserSessionController` révoque l'éventuelle famille refresh attachée à l'ancien cookie, puis renvoie HTTP 202 en effaçant ce cookie HttpOnly. Une session BO antérieure ne doit pas permettre au navigateur de rafraîchir son accès pendant qu'une nouvelle connexion attend une preuve TOTP. Les cookies de refresh ne sont recréés qu'après validation par `/apibo/auth/browser/second-factor`. Les clients BO et App effacent aussi le challenge conservé en mémoire sur déconnexion.
+
+## Verrouillage de la connexion BO (17/11/2026)
+
+La distribution standard impose TwoFactor dès `create-project`, y compris dans les projets BO seuls. Dans `PasswordLogin`, un principal BO authentifié **ne peut jamais recevoir de session sans challenge** : en l'absence du provider `symsvel.auth.second_factor` ou lorsque son `begin()` renvoie `null`, une `LogicException` signale une mauvaise configuration (échec fermé, aucune émission de tokens). Un identifiant ou mot de passe invalide reste refusé normalement. L'App continue d'accepter la connexion par mot de passe si la politique 2FA n'est pas activée et si le compte n'est pas enrôlé. Cette garde concerne l'émission interactive par `PasswordLogin` ; tout autre émetteur interactif futur doit appliquer le même contrôle, en particulier la connexion Google/OIDC **réservée à l'App**.
+
+Tests associés : non-émission BO sans provider / avec provider permissif ; maintien du login App classique ; tests des challenges dans TwoFactor. La vérification locale de tous les contrôleurs, du Setup et des quatre SGBD demeure obligatoire avant merge.

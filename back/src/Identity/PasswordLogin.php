@@ -8,8 +8,8 @@ use SymSvel\Module\Auth\Token\TokenIssuer;
 use SymSvel\Module\Auth\Token\TokenPair;
 
 /**
- * Password verification is followed by the optional, registered second-factor
- * policy BEFORE any full session token is issued.
+ * Password verification precedes the factor policy. BO always requires a
+ * challenge; App keeps optional second-factor enrollment.
  */
 final readonly class PasswordLogin
 {
@@ -62,6 +62,12 @@ final readonly class PasswordLogin
             if ($challenge !== null) {
                 return $challenge;
             }
+        }
+
+        // Fail closed: an absent or permissive provider must never let a BO
+        // session bypass the administrator's mandatory second factor.
+        if ($context === 'bo') {
+            throw new \LogicException('BO requires a registered second-factor provider that issues a challenge.');
         }
 
         return $this->tokens->issue($subject, $now);

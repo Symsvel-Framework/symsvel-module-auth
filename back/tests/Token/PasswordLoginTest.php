@@ -43,10 +43,10 @@ final class PasswordLoginTest extends TestCase
         self::assertNull($login->login('bo', 'a@example.com', 'secret', $now));
         self::assertSame(0, $store->transactions);
 
-        $principal->subject = new TokenSubject('bo', 5);
-        $pair = $login->login('bo', 'a@example.com', 'secret', $now);
+        $principal->subject = new TokenSubject('app', 5);
+        $pair = $login->login('app', 'a@example.com', 'secret', $now);
         self::assertNotNull($pair);
-        self::assertSame('bo', $pair->context);
+        self::assertSame('app', $pair->context);
         self::assertSame(1, $store->transactions);
         self::assertSame(['save'], $store->operations);
     }
@@ -99,6 +99,46 @@ final class PasswordLoginTest extends TestCase
         $this->expectException(\LogicException::class);
         new PasswordLogin($principal, new TokenIssuer(new InMemoryTokenStore(), new TokenFactory()),
             [$provider, $provider]);
+    }
+
+    public function testBoCannotLoginWithoutAnEnforcingSecondFactorProvider(): void
+    {
+        $principal = new class implements PasswordPrincipal {
+            public function authenticate(string $context, string $identifier, string $password): ?TokenSubject
+            {
+                return $password === 'valid' ? new TokenSubject($context, 21) : null;
+            }
+        };
+        $store = new InMemoryTokenStore();
+        $issuer = new TokenIssuer($store, new TokenFactory());
+        $now = new \DateTimeImmutable('2026-11-17T10:00:00+00:00');
+
+        foreach ([
+            new PasswordLogin($principal, $issuer),
+            new PasswordLogin($principal, $issuer, [
+                new class implements LoginSecondFactorInterface {
+                    public function begin(TokenSubject $subject, \DateTimeImmutable $now): ?SecondFactorChallenge
+                    {
+                        return null;
+                    }
+                    public function complete(string $context, string $challenge, string $code, \DateTimeImmutable $now): ?SecondFactorVerified
+                    {
+                        return null;
+                    }
+                },
+            ]),
+        ] as $login) {
+            try {
+                $login->login('bo', 'admin@example.test', 'valid', $now);
+                self::fail('BO login must fail closed without a challenge.');
+            } catch (\LogicException $e) {
+                self::assertStringContainsString('second-factor provider', $e->getMessage());
+            }
+        }
+
+        self::assertSame(0, $store->transactions);
+        self::assertSame([], $store->operations);
+        self::assertNotNull((new PasswordLogin($principal, $issuer))->login('app', 'user@example.test', 'valid', $now));
     }
 
 }

@@ -323,7 +323,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
     public function testPasswordLoginAndAccountDeactivationAgainstRealDatabase(): void
     {
         $now = new \DateTimeImmutable('2026-11-14T10:00:00+00:00');
-        $subject = new TokenSubject('bo', 17);
+        $subject = new TokenSubject('app', 17);
         $provider = new class($subject) implements \SymSvel\Module\Auth\Identity\PasswordPrincipal, \SymSvel\Module\Auth\Identity\PrincipalStatus {
             public bool $enabled = true;
             public int $statusCalls = 0;
@@ -333,7 +333,7 @@ final class DbalTokenStoreMatrixTest extends TestCase
             public function authenticate(string $context, string $identifier, string $password): ?TokenSubject
             {
                 return $this->enabled
-                    && $context === 'bo'
+                    && $context === 'app'
                     && $identifier === 'admin@example.test'
                     && hash_equals('correct-password', $password)
                     ? $this->subject
@@ -357,23 +357,23 @@ final class DbalTokenStoreMatrixTest extends TestCase
             $provider,
         );
 
-        self::assertNull($login->login('bo', 'admin@example.test', 'incorrect', $now));
+        self::assertNull($login->login('app', 'admin@example.test', 'incorrect', $now));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens'));
 
-        $pair = $login->login('bo', 'admin@example.test', 'correct-password', $now);
+        $pair = $login->login('app', 'admin@example.test', 'correct-password', $now);
         self::assertNotNull($pair);
-        self::assertSame(17, $resolver->resolve($pair->access->raw, 'bo', $now)?->id);
+        self::assertSame(17, $resolver->resolve($pair->access->raw, 'app', $now)?->id);
         self::assertNull($resolver->resolve($pair->access->raw, 'app', $now));
         self::assertSame(1, $provider->statusCalls);
 
         $provider->enabled = false;
-        self::assertNull($resolver->resolve($pair->access->raw, 'bo', $now));
-        self::assertNull($login->login('bo', 'admin@example.test', 'correct-password', $now));
+        self::assertNull($resolver->resolve($pair->access->raw, 'app', $now));
+        self::assertNull($login->login('app', 'admin@example.test', 'correct-password', $now));
         self::assertSame(2, $provider->statusCalls);
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens'));
 
         (new TokenSessionRevoker($this->store))->revokeAll($subject, $now);
-        self::assertNull((new AccessTokenVerifier($this->store))->verify($pair->access->raw, 'bo', $now));
+        self::assertNull((new AccessTokenVerifier($this->store))->verify($pair->access->raw, 'app', $now));
     }
 
     public function testAccessExpiryBoundaryAndRefreshExpiryDoNotExtendAccess(): void
