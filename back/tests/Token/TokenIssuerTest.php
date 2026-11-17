@@ -32,4 +32,26 @@ final class TokenIssuerTest extends TestCase
 
         self::assertSame('app', $pair->context);
     }
+    public function testConditionalIssueDoesNotCreateTokensWhenGuardDeclines(): void
+    {
+        $store = new InMemoryTokenStore();
+        $issuer = new TokenIssuer($store, new TokenFactory());
+        $subject = new TokenSubject('bo', 17);
+        $now = new \DateTimeImmutable('2026-11-17T10:00:00+00:00');
+        $called = false;
+        self::assertNull($issuer->issueWhen($subject, $now, static function () use (&$called): bool {
+            $called = true;
+            return false;
+        }));
+        self::assertTrue($called);
+        self::assertSame(1, $store->transactions);
+        self::assertSame([], $store->operations);
+
+        $pair = $issuer->issueWhen($subject, $now, static fn (): bool => true);
+        self::assertNotNull($pair);
+        self::assertSame('bo', $pair->context);
+        self::assertSame(2, $store->transactions);
+        self::assertSame(['save'], $store->operations);
+    }
+
 }
