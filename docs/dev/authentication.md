@@ -655,3 +655,8 @@ Le module optionnel `symsvel-framework/module-two-factor` fournit ce provider. L
 Les endpoints de complétion sont `POST /apiopen/auth/second-factor` pour App et `POST /apibo/auth/browser/second-factor` pour BO. Le second conserve le refresh dans le cookie HttpOnly existant et exige l'origine BO approuvée. Sans module optionnel, la complétion refuse le challenge ; aucun appel externe n'est effectué. Les codes de récupération ne sont retournés qu'une seule fois après l'enrôlement.
 
 Le test final exige les quatre SGBD, l'installation BO seul, la compilation du front Svelte, la non-émission des tokens sur HTTP 202 et le rejet du rejeu. La CI seule ne suffit pas à clôturer ce chantier.
+
+
+### Cookie BO préexistant lors d'un challenge (17/11/2026)
+
+Lorsqu'une nouvelle connexion BO exige une 2FA, `BoBrowserSessionController` révoque l'éventuelle famille refresh attachée à l'ancien cookie, puis renvoie HTTP 202 en effaçant ce cookie HttpOnly. Une session BO antérieure ne doit pas permettre au navigateur de rafraîchir son accès pendant qu'une nouvelle connexion attend une preuve TOTP. Les cookies de refresh ne sont recréés qu'après validation par `/apibo/auth/browser/second-factor`. Les clients BO et App effacent aussi le challenge conservé en mémoire sur déconnexion.
