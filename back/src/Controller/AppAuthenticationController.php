@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use SymSvel\Module\Auth\Identity\AuthenticatedTokenResolver;
 use SymSvel\Module\Auth\Identity\PasswordLogin;
+use SymSvel\Module\Auth\Identity\SecondFactorChallenge;
 use SymSvel\Module\Auth\Token\ContextSessionLogout;
 use SymSvel\Module\Auth\Token\RefreshDecision;
 use SymSvel\Module\Auth\Token\TokenRotation;
@@ -38,6 +39,9 @@ final readonly class AppAuthenticationController
         $pair = $this->login->login(
             'app', $payload['email'], $payload['password'], new \DateTimeImmutable('now', new \DateTimeZone('UTC')),
         );
+        if ($pair instanceof SecondFactorChallenge) {
+            return self::answer($pair->response(), 202);
+        }
         return $pair === null
             ? self::answer(['error' => ['code' => 'invalid_credentials']], 401)
             : self::answer(self::tokens($pair));
