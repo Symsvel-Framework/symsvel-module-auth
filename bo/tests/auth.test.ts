@@ -25,5 +25,6 @@ describe('auth module', () => {
   it('externalizes French and English labels', () => {
     expect(invitationActivationCopy('fr-FR').submit).toBe('Activer mon compte');
     expect(invitationActivationCopy('en-GB').submit).toBe('Activate account');
+    expect(invitationActivationCopy('es-ES').submit).toBe('Activer mon compte');
   });
 });
