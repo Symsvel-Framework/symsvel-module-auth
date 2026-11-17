@@ -166,5 +166,7 @@ final class AuthBundle extends AbstractBundle
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }
+        $builder->getDefinition(PasswordLogin::class)
+            ->setArgument('$secondFactors', new TaggedIteratorArgument('symsvel.auth.second_factor'));
     }
 }
