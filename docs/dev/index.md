@@ -92,3 +92,5 @@ Les libellés du tableau de bord générique (`dashboard`, `loggedIn`) ont été
 ### Shell natif BO et Auth
 
 Les actions de session du shell (`logout`, `checking`) sont propriété du module Auth malgré leur affichage dans la navigation native BO. Les clés `bo.auth.session.*` figurent dans les dictionnaires BO et sont consommées par le shell. Les dictionnaires natifs `system` ne doivent pas absorber de textes fonctionnels Auth.
+
+Les assertions de dictionnaires vérifient explicitement les libellés du shell attribués à ce module, en plus de l'alignement des clés FR/EN. Le shell reste un consommateur des traductions et conserve ses fallbacks natifs.
