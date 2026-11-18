@@ -21,5 +21,15 @@ export default {
     "2": "Faible",
     "3": "Moyenne",
     "4": "Bonne"
+  },
+  "signIn": {
+    "title": "Connexion",
+    "intro": "Connectez-vous à l’administration.",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "busy": "Connexion…",
+    "submit": "Se connecter",
+    "invalidCredentials": "Identifiants incorrects.",
+    "failure": "Connexion impossible pour le moment."
   }
 } as const;

@@ -21,5 +21,15 @@ export default {
     "2": "Low",
     "3": "Moderate",
     "4": "Good"
+  },
+  "signIn": {
+    "title": "Sign in",
+    "intro": "Sign in to the administration panel.",
+    "email": "Email address",
+    "password": "Password",
+    "busy": "Signing in…",
+    "submit": "Sign in",
+    "invalidCredentials": "Invalid credentials.",
+    "failure": "Sign-in is currently unavailable."
   }
 } as const;

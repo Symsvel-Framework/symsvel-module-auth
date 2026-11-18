@@ -78,3 +78,8 @@ Les libellés français sont la valeur de repli lorsque la langue d'interface n'
 ## Dictionnaires Auth BO et App (18/11/2026)
 
 Auth est propriétaire des textes d'authentification des deux interfaces. Les fichiers `bo/src/lib/translations/<lang>.ts` et `app/src/lib/translations/<lang>.ts` fournissent les valeurs FR/EN, y compris les listes de robustesse via des clés numériques `strengthLevels.0` etc. Tooling les installe en `lib/translations/auth/<lang>.ts`, puis les persiste dans Languages avec les clés `bo.auth.*` et `app.auth.*`. Les écrans hôtes restent consommateurs et ne deviennent pas propriétaires de ces chaînes. CI et CT XT requis.
+
+
+### Connexion native du BO (18/11/2026)
+
+La page `/login` est hébergée dans le Svelte BO, mais ses libellés fonctionnels appartiennent au module Auth. Le module fournit des clés `bo.auth.signIn.*` dans ses dictionnaires BO FR/EN. La clé ancienne `bo.auth.login` du formulaire d'activation reste distincte, afin d'éviter tout conflit texte/objet avec `bo.auth.signIn.*`. Aucun texte de connexion n'est attribué à `bo.system`.
