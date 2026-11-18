@@ -1,3 +1,5 @@
+import { generatedTranslation } from '../../i18n/generated-translations';
+
 export function validInvitationToken(token: string | null): token is string {
   return typeof token === 'string' && /^[A-Za-z0-9_-]{43}$/.test(token);
 }
@@ -49,5 +51,10 @@ const messages = {
 };
 export type InvitationActivationCopy = typeof messages.fr;
 export function invitationActivationCopy(language: string | null): InvitationActivationCopy {
-  return language?.toLowerCase().split('-')[0] === 'en' ? messages.en : messages.fr;
+  const base = language?.toLowerCase().split('-')[0] === 'en' ? messages.en : messages.fr;
+  return Object.fromEntries(Object.entries(base).map(([key, value]) => [
+    key, Array.isArray(value)
+      ? value.map((entry, index) => generatedTranslation(language, 'bo.auth.' + key + '.' + index) ?? entry)
+      : generatedTranslation(language, 'bo.auth.' + key) ?? value
+  ])) as InvitationActivationCopy;
 }

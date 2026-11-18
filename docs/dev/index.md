@@ -73,3 +73,8 @@ continue de refuser chemins, credentials et query strings.
 ## Fallback des libellés BO (17/11/2026)
 
 Les libellés français sont la valeur de repli lorsque la langue d'interface n'a pas encore de traduction disponible ; l'anglais reste servi pour `en`. Les codes ISO enregistrés en base ne changent pas. Cette correction ne crée pas d'éditeur de traductions ni de lecteur de fichiers dynamiques ; le déploiement d'un tel mécanisme relève du chantier i18n dédié. Tests FR, EN et locale non traduite ajoutés ; CI et crash-test local à confirmer.
+
+
+## Dictionnaires Auth BO et App (18/11/2026)
+
+Auth est propriétaire des textes d'authentification des deux interfaces. Les fichiers `bo/src/lib/translations/<lang>.ts` et `app/src/lib/translations/<lang>.ts` fournissent les valeurs FR/EN, y compris les listes de robustesse via des clés numériques `strengthLevels.0` etc. Tooling les installe en `lib/translations/auth/<lang>.ts`, puis les persiste dans Languages avec les clés `bo.auth.*` et `app.auth.*`. Les écrans hôtes restent consommateurs et ne deviennent pas propriétaires de ces chaînes. CI et CT XT requis.
