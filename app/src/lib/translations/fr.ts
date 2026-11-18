@@ -9,8 +9,6 @@ export default {
   "genericError": "Opération impossible pour le moment.",
   "register": "Créer un compte",
   "verifyEmail": "Confirmer mon adresse",
-  "dashboard": "Mon espace",
-  "loggedIn": "Session App vérifiée.",
   "signOut": "Se déconnecter",
   "verifyingSession": "Vérification de la session…",
   "verificationTitle": "Confirmation de l’adresse",

@@ -83,3 +83,8 @@ Auth est propriétaire des textes d'authentification des deux interfaces. Les fi
 ### Connexion native du BO (18/11/2026)
 
 La page `/login` est hébergée dans le Svelte BO, mais ses libellés fonctionnels appartiennent au module Auth. Le module fournit des clés `bo.auth.signIn.*` dans ses dictionnaires BO FR/EN. La clé ancienne `bo.auth.login` du formulaire d'activation reste distincte, afin d'éviter tout conflit texte/objet avec `bo.auth.signIn.*`. Aucun texte de connexion n'est attribué à `bo.system`.
+
+
+### Dashboard App : séparation des propriétaires
+
+Les libellés du tableau de bord générique (`dashboard`, `loggedIn`) ont été retirés des dictionnaires Auth et placés sous `app.system.dashboard.*` dans le Svelte App. Les fonctions de connexion, récupération et déconnexion restent des clés `app.auth.*`. Les textes de repli historiques du helper Auth sont temporairement conservés pour les projets non encore synchronisés.

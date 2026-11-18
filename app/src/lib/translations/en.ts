@@ -9,8 +9,6 @@ export default {
   "genericError": "Operation currently unavailable.",
   "register": "Create account",
   "verifyEmail": "Verify email",
-  "dashboard": "My space",
-  "loggedIn": "App session verified.",
   "signOut": "Sign out",
   "verifyingSession": "Checking session…",
   "verificationTitle": "Verify your email",
