@@ -88,3 +88,7 @@ La page `/login` est hébergée dans le Svelte BO, mais ses libellés fonctionne
 ### Dashboard App : séparation des propriétaires
 
 Les libellés du tableau de bord générique (`dashboard`, `loggedIn`) ont été retirés des dictionnaires Auth et placés sous `app.system.dashboard.*` dans le Svelte App. Les fonctions de connexion, récupération et déconnexion restent des clés `app.auth.*`. Les textes de repli historiques du helper Auth sont temporairement conservés pour les projets non encore synchronisés.
+
+### Shell natif BO et Auth
+
+Les actions de session du shell (`logout`, `checking`) sont propriété du module Auth malgré leur affichage dans la navigation native BO. Les clés `bo.auth.session.*` figurent dans les dictionnaires BO et sont consommées par le shell. Les dictionnaires natifs `system` ne doivent pas absorber de textes fonctionnels Auth.

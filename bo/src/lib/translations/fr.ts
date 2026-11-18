@@ -31,5 +31,9 @@ export default {
     "submit": "Se connecter",
     "invalidCredentials": "Identifiants incorrects.",
     "failure": "Connexion impossible pour le moment."
+  },
+  "session": {
+    "logout": "Déconnexion",
+    "checking": "Vérification de la session…"
   }
 } as const;

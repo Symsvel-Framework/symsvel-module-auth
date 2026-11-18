@@ -31,5 +31,9 @@ export default {
     "submit": "Sign in",
     "invalidCredentials": "Invalid credentials.",
     "failure": "Sign-in is currently unavailable."
+  },
+  "session": {
+    "logout": "Log out",
+    "checking": "Checking session…"
   }
 } as const;
