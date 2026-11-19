@@ -736,6 +736,8 @@ et ses index avec Doctrine Schema, comme les autres migrations Auth.
 Elle ne dépend plus de l'import ni du helper externe pour son exécution.
 Un test de non-régression vérifie l'autonomie de la source, son équivalence
 DDL avec `ProfileEmailChangeSchema` et sa suppression par `down()`.
+Pour l'exécuter dans le dépôt Auth isolé, `doctrine/migrations` est déclaré
+uniquement en `require-dev` : le projet hôte le fournit déjà en production.
 Le compilateur Tooling et les versions de migrations restent inchangés.
 
 **Validation :** CI Auth puis nouvelle installation XT depuis une base
