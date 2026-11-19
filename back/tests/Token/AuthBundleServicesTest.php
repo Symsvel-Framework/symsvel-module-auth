@@ -38,6 +38,11 @@ use SymSvel\Module\Auth\Token\TokenLogout;
 use SymSvel\Module\Auth\Token\TokenRotation;
 use SymSvel\Module\Auth\Token\TokenSessionRevoker;
 use SymSvel\Module\Auth\Token\TokenStore;
+use SymSvel\Module\Auth\Identity\ContextProfileEmailOwners;
+use SymSvel\Module\Auth\Identity\ProfileEmailChangeCompletion;
+use SymSvel\Module\Auth\Identity\ProfileEmailChangeDispatch;
+use SymSvel\Module\Auth\Token\DbalProfileEmailChangeStore;
+use SymSvel\Module\Auth\Controller\ProfileEmailChangeCompleteController;
 
 final class AuthBundleServicesTest extends TestCase
 {
@@ -53,6 +58,23 @@ final class AuthBundleServicesTest extends TestCase
         self::assertArrayHasKey('controller.service_arguments', $builder->getDefinition(AdminInvitationCompleteController::class)->getTags());
         self::assertTrue($builder->hasDefinition(EmailVerificationCompleteController::class));
         self::assertArrayHasKey('controller.service_arguments', $builder->getDefinition(EmailVerificationCompleteController::class)->getTags());
+
+        self::assertTrue($builder->hasDefinition(ProfileEmailChangeCompleteController::class));
+        self::assertArrayHasKey(
+            'controller.service_arguments',
+            $builder->getDefinition(ProfileEmailChangeCompleteController::class)->getTags(),
+        );
+        $profileOwners = $builder->getDefinition(ContextProfileEmailOwners::class)->getArgument('$providers');
+        self::assertInstanceOf(TaggedIteratorArgument::class, $profileOwners);
+        self::assertSame('symsvel.auth.profile_email_owner', $profileOwners->getTag());
+
+        $profileStore = $builder->getDefinition(DbalProfileEmailChangeStore::class)->getArgument('$db');
+        self::assertInstanceOf(Reference::class, $profileStore);
+        self::assertSame('doctrine.dbal.default_connection', (string) $profileStore);
+
+        $profileCompletion = $builder->getDefinition(ProfileEmailChangeCompletion::class)->getArgument('$db');
+        self::assertInstanceOf(Reference::class, $profileCompletion);
+        self::assertSame('doctrine.dbal.default_connection', (string) $profileCompletion);
 
         self::assertTrue($builder->hasDefinition(ContextEmailVerificationIdentity::class));
         $emailOwners = $builder->getDefinition(ContextEmailVerificationIdentity::class)->getArgument('$providers');
@@ -100,6 +122,8 @@ final class AuthBundleServicesTest extends TestCase
             PasswordResetLimiter::class,
             PasswordResetDispatch::class,
             EmailVerificationDispatch::class,
+            ProfileEmailChangeDispatch::class,
+            ProfileEmailChangeCompletion::class,
             AdminInvitationDispatch::class,
             AuthenticatedTokenResolver::class,
             TokenIssuer::class,

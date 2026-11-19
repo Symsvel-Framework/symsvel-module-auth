@@ -712,3 +712,12 @@ confirmation unique, révocation access/refresh, refus d'un ancien mail
 modifié, rollback en cas de doublon et jeton expiré/non conforme.
 Ces tests documentent la couche Auth ; les tests multi-SGBD et E2E
 sont à effectuer sur XT.
+
+### Tests d'intégration du câblage de profil (19/11/2026)
+
+`AuthBundleServicesTest` vérifie l'enregistrement du collecteur des
+propriétaires de changement d'e-mail, le `TaggedIterator` des contextes
+BO/App, le store DBAL commun et le contrôleur de confirmation.
+`ProfileEmailChangeRoutesTest` vérifie les routes HTTP séparées,
+l'origine trusted du lien et le refus d'un jeton malformé avant toute
+consultation des services d'identité.
