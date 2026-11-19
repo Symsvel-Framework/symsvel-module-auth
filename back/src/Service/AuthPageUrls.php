@@ -27,9 +27,11 @@ final readonly class AuthPageUrls
         $path = match ($context.':'.$page) {
             'bo:reset' => '/reset-password',
             'bo:verify' => '/verify-email',
+            'bo:change-email' => '/verify-email-change',
             'bo:invitation' => '/auth/activate',
             'app:reset' => '/reset-password',
             'app:verify' => '/verify-email',
+            'app:change-email' => '/verify-email-change',
             'app:invitation' => '/activate',
             default => throw new \InvalidArgumentException('Unknown authentication page.'),
         };

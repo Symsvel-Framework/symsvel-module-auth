@@ -17,6 +17,7 @@ use SymSvel\Module\Auth\Controller\BoLogoutController;
 use SymSvel\Module\Auth\Controller\BoSessionController;
 use SymSvel\Module\Auth\Controller\PasswordResetCompleteController;
 use SymSvel\Module\Auth\Controller\EmailVerificationCompleteController;
+use SymSvel\Module\Auth\Controller\ProfileEmailChangeCompleteController;
 use SymSvel\Module\Auth\Controller\AdminInvitationCompleteController;
 use SymSvel\Module\Auth\Controller\AppInvitationCompleteController;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -27,6 +28,9 @@ use SymSvel\Module\Auth\Identity\ContextIdentityProvider;
 use SymSvel\Module\Auth\Identity\ContextPasswordResetIdentity;
 use SymSvel\Module\Auth\Identity\ContextEmailVerificationIdentity;
 use SymSvel\Module\Auth\Identity\EmailVerificationCompletion;
+use SymSvel\Module\Auth\Identity\ContextProfileEmailOwners;
+use SymSvel\Module\Auth\Identity\ProfileEmailChangeCompletion;
+use SymSvel\Module\Auth\Identity\ProfileEmailChangeDispatch;
 use SymSvel\Module\Auth\Identity\AdminInvitationOwners;
 use SymSvel\Module\Auth\Identity\AppInvitationOwners;
 use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
@@ -54,6 +58,7 @@ use SymSvel\Module\Auth\Token\AccessTokenVerifier;
 use SymSvel\Module\Auth\Token\DbalTokenStore;
 use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
 use SymSvel\Module\Auth\Token\DbalEmailVerificationStore;
+use SymSvel\Module\Auth\Token\DbalProfileEmailChangeStore;
 use SymSvel\Module\Auth\Token\DbalAdminInvitationStore;
 use SymSvel\Module\Auth\Token\DbalAppInvitationStore;
 use SymSvel\Module\Auth\Token\RefreshTokenGuard;
@@ -99,6 +104,8 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(DbalEmailVerificationStore::class, DbalEmailVerificationStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
+        $builder->register(DbalProfileEmailChangeStore::class, DbalProfileEmailChangeStore::class)
+            ->setArgument('$db', new Reference('doctrine.dbal.default_connection'));
         $builder->register(DbalAdminInvitationStore::class, DbalAdminInvitationStore::class)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->register(DbalAppInvitationStore::class, DbalAppInvitationStore::class)
@@ -119,6 +126,8 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.password_reset_identity'));
         $builder->register(ContextEmailVerificationIdentity::class, ContextEmailVerificationIdentity::class)
             ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.email_verification_identity'));
+        $builder->register(ContextProfileEmailOwners::class, ContextProfileEmailOwners::class)
+            ->setArgument('$providers', new TaggedIteratorArgument('symsvel.auth.profile_email_owner'));
         $builder->register(AdminInvitationCompletion::class, AdminInvitationCompletion::class)
             ->setAutowired(true)
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
@@ -143,7 +152,7 @@ final class AuthBundle extends AbstractBundle
 
         $builder->register(TrustedBoOrigin::class, TrustedBoOrigin::class)->setAutowired(true);
 
-        foreach ([BoBrowserSessionController::class, BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class, AppInvitationCompleteController::class] as $controller) {
+        foreach ([ProfileEmailChangeCompleteController::class, BoBrowserSessionController::class, BoLoginController::class, AppAuthenticationController::class, AppEmailVerificationController::class, AppPasswordResetController::class, BoSessionController::class, BoLogoutController::class, BoRefreshController::class, PasswordResetCompleteController::class, EmailVerificationCompleteController::class, AdminInvitationCompleteController::class, AppInvitationCompleteController::class] as $controller) {
             $builder->register($controller, $controller)
                 ->setAutowired(true)
                 ->addTag('controller.service_arguments');
@@ -161,11 +170,15 @@ final class AuthBundle extends AbstractBundle
             PasswordLogin::class,
             PasswordResetDispatch::class,
             EmailVerificationDispatch::class,
+            ProfileEmailChangeCompletion::class,
+            ProfileEmailChangeDispatch::class,
             AdminInvitationDispatch::class,
             AppInvitationDispatch::class,
         ] as $service) {
             $builder->register($service, $service)->setAutowired(true);
         }
+        $builder->getDefinition(ProfileEmailChangeCompletion::class)
+            ->setArgument('$db', new Reference('doctrine.dbal.default_connection'));
         $builder->getDefinition(PasswordLogin::class)
             ->setArgument('$secondFactors', new TaggedIteratorArgument('symsvel.auth.second_factor'));
     }

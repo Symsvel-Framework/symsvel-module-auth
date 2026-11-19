@@ -668,3 +668,37 @@ La distribution standard impose TwoFactor dès `create-project`, y compris dans 
 Tests associés : non-émission BO sans provider / avec provider permissif ; maintien du login App classique ; tests des challenges dans TwoFactor. La vérification locale de tous les contrôleurs, du Setup et des quatre SGBD demeure obligatoire avant merge.
 
 La matrice DBAL conserve le scénario d'authentification par mot de passe sans second facteur dans le contexte `app` uniquement : elle doit vérifier le rejet du token au contexte croisé `bo`. Le parcours BO et son challenge obligatoire sont testés indépendamment dans `PasswordLoginTest` et dans les intégrations TwoFactor.
+
+## Modification vérifiée de l'adresse personnelle (19/11/2026)
+
+Les modules Admins et Users possèdent leur identité et leur e-mail ;
+Auth possède le jeton, la confirmation et la révocation des sessions.
+`ProfileEmailChangeDispatch` reprend l'émetteur Mails configuré, le
+garde anti-abus existant et le template de confirmation de boîte.
+Le lien pointe vers une origine fiable définie par le Setup
+(`AuthPageUrls`), jamais vers le champ Host de la requête.
+
+`symsvel_auth_profile_email_changes` conserve l'adresse proposée,
+l'empreinte SHA-256 de l'adresse précédente, l'empreinte du secret
+opaque, le contexte et l'expiration. Le secret brut n'est jamais stocké.
+L'adresse existante et sa confirmation restent **inchangées** tant que
+le destinataire de la nouvelle adresse n'a pas confirmé le lien.
+`ProfileEmailChangeCompletion` consomme le jeton, compare l'adresse
+actuelle, demande au propriétaire de l'identité la mise à jour et
+révoque toutes ses sessions dans **une seule transaction DBAL**.
+Une modification concurrente, un doublon d'adresse ou un jeton
+expiré/consommé n'aboutit pas à un changement partiel.
+
+Les routes de confirmation de contexte sont :
+`POST /apibo/auth/profile/email-change/complete` (BO) et
+`POST /apiopen/auth/profile/email-change/complete` (App).
+Le premier flux HTTP est anonyme même s'il est sur `/apibo`,
+car le jeton de confirmation remplace la session. Les points
+d'entrée authentifiés de demande sont propres aux modules Admins
+et Users. Les anciennes routes de vérification initiale restent
+inchangées.
+
+La migration `Version20261119000012` est un DDL Doctrine Schema
+sans DML. Validation obligatoire : CI, registre de versions Tooling,
+simulation d'email délivré, collision concurrente, jeton réutilisé,
+séparation BO/App, CT XT et connexion avec la nouvelle adresse.
