@@ -94,5 +94,5 @@
 
 <style>
   meter { display: block; width: 100%; height: 13px; }
-  small { color: #667085; }
+  small { color: var(--bo-muted); }
 </style>
