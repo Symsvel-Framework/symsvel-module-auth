@@ -702,3 +702,13 @@ La migration `Version20261119000012` est un DDL Doctrine Schema
 sans DML. Validation obligatoire : CI, registre de versions Tooling,
 simulation d'email délivré, collision concurrente, jeton réutilisé,
 séparation BO/App, CT XT et connexion avec la nouvelle adresse.
+
+### Tests de consommation de jetons de changement d'e-mail (19/11/2026)
+
+`ProfileEmailChangeCompletionTest` utilise SQLite/Doctrine DBAL réel
+avec deux comptes, une contrainte d'unicité sur email et les tables Auth.
+Il vérifie : adresse inchangée avant confirmation, isolation de contexte,
+confirmation unique, révocation access/refresh, refus d'un ancien mail
+modifié, rollback en cas de doublon et jeton expiré/non conforme.
+Ces tests documentent la couche Auth ; les tests multi-SGBD et E2E
+sont à effectuer sur XT.
