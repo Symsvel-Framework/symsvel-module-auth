@@ -721,3 +721,24 @@ BO/App, le store DBAL commun et le contrôleur de confirmation.
 `ProfileEmailChangeRoutesTest` vérifie les routes HTTP séparées,
 l'origine trusted du lien et le refus d'un jeton malformé avant toute
 consultation des services d'identité.
+
+### Correctif de compilation Schema, CT MySQL du 19/11/2026
+
+Le premier CT XT en installation vierge `--dev` a révélé un échec de
+`Version20261119000012` : la migration appelait
+`ProfileEmailChangeSchema::apply($schema)` via un `use` de classe.
+`ModuleMigrationCompiler` conserve le corps de `up()/down()` mais ne
+recopie pas les imports de la source : le PHP Doctrine compilé cherchait
+`DoctrineMigrations\ProfileEmailChangeSchema` et échouait à l'exécution.
+
+La source `Version20261119000012` déclare désormais directement sa table
+et ses index avec Doctrine Schema, comme les autres migrations Auth.
+Elle ne dépend plus de l'import ni du helper externe pour son exécution.
+Un test de non-régression vérifie l'autonomie de la source, son équivalence
+DDL avec `ProfileEmailChangeSchema` et sa suppression par `down()`.
+Le compilateur Tooling et les versions de migrations restent inchangés.
+
+**Validation :** CI Auth puis nouvelle installation XT depuis une base
+vierge, sur MySQL, MariaDB, PostgreSQL et SQLite. Le CT d'origine a échoué,
+il ne constitue pas une validation des quatre moteurs.
+
