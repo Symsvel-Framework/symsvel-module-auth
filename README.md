@@ -9,3 +9,7 @@ Les interfaces de connexion relèvent des composants BO et App correspondants. L
 ## Sécurité des connexions BO
 
 Dans la distribution standard, `symsvel-framework/module-two-factor` est installé automatiquement. Après authentification du mot de passe, chaque nouvelle connexion BO exige un challenge TOTP. Si le provider de second facteur manque ou n'émet pas de challenge, Auth échoue sans créer de session. L'App conserve une politique facultative ; Google/OIDC est réservé à l'App et n'est pas fourni par ce module. Voir `docs/dev/authentication.md`.
+
+## Distribution stable v1.0.0 (20/11/2026)
+
+Le manifeste Composer du tag stable déclare exclusivement des contraintes `^1.0` pour ses dépendances SymSvel : `symsvel-framework/module-mails`, `symsvel-framework/module-settings`, `symsvel-framework/module-acls`. Les références `dev-dev` restent réservées à la branche `dev` et à l'installation de maintenance avec `--dev`. Le tag `v1.0.0` n'est à publier **qu'après** le tag stable de chaque dépendance, son indexation dans Satis et la réussite des contrôles CI ; aucune release n'est produite par ce commit.
