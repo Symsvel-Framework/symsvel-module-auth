@@ -1,13 +1,25 @@
 {
     "schema": 1,
     "name": "Auth",
-    "dependencies": {},
-    "tables": [],
+    "dependencies": {
+        "mails": "*"
+    },
+    "tables": [
+        "symsvel_auth_access_tokens",
+        "symsvel_auth_refresh_tokens",
+        "symsvel_auth_password_reset_tokens",
+        "symsvel_auth_reset_limits",
+        "symsvel_auth_email_verification_tokens",
+        "symsvel_auth_admin_invitations"
+    ],
     "components": {
-        "back": "back"
+        "back": "back",
+        "bo": "bo"
     },
     "documentation": {
-        "dev": "docs/dev"
+        "dev": "docs/dev",
+        "admin": "docs/admin",
+        "user": "docs/user"
     },
     "extensions": []
 }

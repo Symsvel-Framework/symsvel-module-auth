@@ -1,12 +1,142 @@
 name: QA
 on: [push, pull_request]
+
+# The Compose databases are shared by the two self-hosted runners.
+# Keep independent runs serialized while preserving the three-engine matrix.
+concurrency:
+  group: symsvel-auth-local-database-matrix
+  cancel-in-progress: false
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, ARM64, symsvel]
     steps:
       - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-      - run: composer install --no-interaction --prefer-dist
+      - name: Verify preinstalled PHP 8.4 and SQLite driver
+        run: |
+          php -v
+          php -r 'if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || !extension_loaded("pdo_sqlite")) { exit(1); }'
+      - name: Install private Composer dependencies
+        env:
+          SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}
+        run: |
+          if [ -z "$SYMSVEL_READ_TOKEN" ]; then
+            echo "::error::SYMSVEL_READ_TOKEN is missing. A read-only token for private SymSvel repositories is required."
+            exit 1
+          fi
+          for repository in symsvel-module-mails symsvel-module-settings symsvel-module-acls; do
+            if ! curl --fail --silent --show-error --output /dev/null \
+                --header "Authorization: Bearer $SYMSVEL_READ_TOKEN" \
+                --header "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/Symsvel-Framework/$repository"; then
+              echo "::error::SYMSVEL_READ_TOKEN cannot read private repository $repository (check expiry and permissions)."
+              exit 1
+            fi
+          done
+          export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
+          composer install --no-interaction --prefer-dist --no-progress
       - run: composer qa
+
+  database-matrix:
+    runs-on: [self-hosted, linux, ARM64, symsvel]
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [postgres, mysql, mariadb]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify preinstalled PHP 8.4 and database drivers
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: |
+          php -v
+          php -r '$needed = match (getenv("ENGINE")) { "postgres" => "pdo_pgsql", "mysql", "mariadb" => "pdo_mysql", default => throw new RuntimeException("Unknown engine") }; $missing = array_values(array_filter(["pdo_sqlite", $needed], static fn (string $driver): bool => !extension_loaded($driver))); if (PHP_VERSION_ID < 80400 || PHP_VERSION_ID >= 80500 || $missing !== []) { fwrite(STDERR, "Unsupported PHP or missing drivers for ".getenv("ENGINE").": ".implode(", ", $missing)."\\n"); exit(1); }'
+      - name: Install private Composer dependencies
+        env:
+          SYMSVEL_READ_TOKEN: ${{ secrets.SYMSVEL_READ_TOKEN }}
+        run: |
+          if [ -z "$SYMSVEL_READ_TOKEN" ]; then
+            echo "::error::SYMSVEL_READ_TOKEN is missing. A read-only token for private SymSvel repositories is required."
+            exit 1
+          fi
+          for repository in symsvel-module-mails symsvel-module-settings symsvel-module-acls; do
+            if ! curl --fail --silent --show-error --output /dev/null \
+                --header "Authorization: Bearer $SYMSVEL_READ_TOKEN" \
+                --header "Accept: application/vnd.github+json" \
+                "https://api.github.com/repos/Symsvel-Framework/$repository"; then
+              echo "::error::SYMSVEL_READ_TOKEN cannot read private repository $repository (check expiry and permissions)."
+              exit 1
+            fi
+          done
+          export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
+          composer install --no-interaction --prefer-dist --no-progress
+      - name: Reset dedicated Auth database and execute DBAL matrix
+        env:
+          ENGINE: ${{ matrix.engine }}
+          SYMSVEL_CI_POSTGRES_PASSWORD: ${{ secrets.SYMSVEL_CI_POSTGRES_PASSWORD }}
+        run: |
+          if [ -z "$SYMSVEL_CI_POSTGRES_PASSWORD" ]; then
+            echo "::error::SYMSVEL_CI_POSTGRES_PASSWORD is required for local database CI."
+            exit 1
+          fi
+          case "$ENGINE" in
+            postgres)
+              export PGPASSWORD="$SYMSVEL_CI_POSTGRES_PASSWORD"
+              pg_isready -h postgres -U symsvel_ci -d postgres
+              dropdb --if-exists --force -h postgres -U symsvel_ci symsvel_auth_ci
+              createdb -h postgres -U symsvel_ci symsvel_auth_ci
+              export SYMSVEL_AUTH_TEST_DATABASE_URL="$(php -r 'echo "postgresql://symsvel_ci:".rawurlencode(getenv("SYMSVEL_CI_POSTGRES_PASSWORD"))."@postgres:5432/symsvel_auth_ci";')"
+              ;;
+            mysql|mariadb)
+              mysql --host="$ENGINE" --user=root --password="$SYMSVEL_CI_POSTGRES_PASSWORD" --execute='DROP DATABASE IF EXISTS symsvel_auth_ci; CREATE DATABASE symsvel_auth_ci'
+              export SYMSVEL_AUTH_TEST_DATABASE_URL="$(php -r 'echo "mysql://root:".rawurlencode(getenv("SYMSVEL_CI_POSTGRES_PASSWORD"))."@".getenv("ENGINE").":3306/symsvel_auth_ci";')"
+              ;;
+            *)
+              echo "::error::Unexpected database engine."
+              exit 1
+              ;;
+          esac
+          vendor/bin/phpunit -c back/phpunit.xml.dist back/tests/Token/DbalTokenStoreMatrixTest.php back/tests/Token/RefreshLockContentionTest.php back/tests/Token/PasswordResetMatrixTest.php back/tests/Token/PasswordResetLockContentionTest.php back/tests/Token/PasswordResetLimiterContentionTest.php
+
+  bo-integration:
+    runs-on: [self-hosted, linux, ARM64, symsvel]
+    steps:
+      - name: Checkout Auth module
+        uses: actions/checkout@v4
+      - name: Checkout BO host on dev
+        uses: actions/checkout@v4
+        with:
+          repository: Symsvel-Framework/symsvel-bo
+          ref: dev
+          path: assembled-bo
+          token: ${{ secrets.SYMSVEL_READ_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: assembled-bo/package-lock.json
+      - name: Assemble Auth module like Tooling
+        run: |
+          mkdir -p assembled-bo/src/lib/modules/auth/routes/auth/activate
+          mkdir -p assembled-bo/src/routes/auth/activate
+          cp bo/src/lib/modules/auth/*.ts assembled-bo/src/lib/modules/auth/
+          cp bo/src/routes/auth/activate/+page.svelte assembled-bo/src/lib/modules/auth/routes/auth/activate/+page.svelte
+          cat > assembled-bo/src/routes/auth/activate/+page.svelte <<'ROUTE'
+          <script lang="ts">
+            import ModulePage from '#lib/modules/auth/routes/auth/activate/+page.svelte';
+          </script>
+          <ModulePage />
+          ROUTE
+      - name: Install BO dependencies
+        working-directory: assembled-bo
+        run: npm ci --no-audit --no-fund
+      - name: Format assembled BO
+        working-directory: assembled-bo
+        run: npm run format
+      - name: Verify BO types, style, static build and unit tests
+        working-directory: assembled-bo
+        run: |
+          npm run check
+          npm run lint
+          npm run build
+          npx playwright install chromium
+          npm run test:unit -- --run

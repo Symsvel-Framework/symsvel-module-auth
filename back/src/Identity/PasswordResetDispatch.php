@@ -1,0 +1,72 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SymSvel\Module\Auth\Identity;
+
+use SymSvel\Module\Auth\Token\DbalPasswordResetStore;
+use SymSvel\Module\Auth\Token\PasswordResetToken;
+use SymSvel\Module\Auth\Service\PasswordResetUrlResolver;
+use SymSvel\Module\Mails\Mail\ConfiguredMailSender;
+use SymSvel\Module\Mails\Mail\RegisteredMailRenderer;
+
+/**
+ * Internal service, not an HTTP endpoint. The caller must enforce anti-abuse
+ * client IP from trusted proxy resolution. The URL is obtained from Settings.
+ */
+final readonly class PasswordResetDispatch
+{
+    public function __construct(
+        private PasswordResetLimiter $limiter,
+        private PasswordResetUrlResolver $urls,
+        private ContextPasswordResetIdentity $identities,
+        private DbalPasswordResetStore $resets,
+        private RegisteredMailRenderer $renderer,
+        private ConfiguredMailSender $sender,
+    ) {
+    }
+
+    public function dispatch(
+        string $context,
+        string $identifier,
+        string $locale,
+        string $clientIp,
+        \DateTimeImmutable $now,
+    ): bool {
+        if (!in_array($context, ['bo', 'app'], true)) {
+            throw new \InvalidArgumentException('Invalid password reset context.');
+        }
+
+        // Read only the server-side configured URL before reserving a quota.
+        $trustedResetPageUrl = $this->urls->forContext($context);
+
+        // Always reserve before looking up a subject, including unknown accounts.
+        if (!$this->limiter->allow($context, $identifier, $clientIp, $now)) {
+            return false;
+        }
+
+        $subject = $this->identities->find($context, $identifier);
+        if ($subject === null) {
+            return false;
+        }
+
+        $email = $this->identities->recoveryEmail($subject);
+        if ($email === null) {
+            return false;
+        }
+
+        $token = PasswordResetToken::issue($context, $now);
+        $mail = $this->renderer->render(
+            'auth.'.$context.'.password_reset',
+            $locale,
+            ['resetUrl' => $trustedResetPageUrl.'?token='.rawurlencode($token->raw)],
+        );
+
+        // A token must be durable before its delivery is attempted.
+        // Sending failures propagate; an unsent token expires naturally.
+        $this->resets->save($subject, $token, $now);
+        $this->sender->send($mail, $email);
+
+        return true;
+    }
+}
