@@ -48,7 +48,11 @@ final readonly class TrustedBoOrigin
             if ($parts['scheme'] !== 'http' || $this->environment !== 'dev' || $request->isSecure()) {
                 return false;
             }
-            $reserved = preg_match('/\\.(?:localhost|local|test)$/D', $parts['host']) === 1;
+            $domain = $this->runtimeDomain();
+            if ($domain === null || !str_ends_with($parts['host'], '.'.$domain)) {
+                return false;
+            }
+            $reserved = preg_match('/\\.(?:localhost|local|test)$/D', $domain) === 1;
             $loopback = in_array($request->server->get('REMOTE_ADDR'), ['127.0.0.1', '::1'], true);
             return $reserved || $loopback;
         }
