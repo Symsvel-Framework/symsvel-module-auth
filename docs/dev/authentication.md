@@ -756,8 +756,10 @@ avec `SYMSVEL_BO_ORIGIN`. En production, seule une origine HTTPS exacte
 est acceptée. En environnement `dev`, une origine HTTP personnalisée
 peut être utilisée uniquement pour un nom de développement réservé
 (`.localhost`, `.local`, `.test`) ou sur loopback, si la requête n'est
-pas déjà HTTPS. Les cookies HTTP locaux restent soumis aux règles
-existantes de `usesLocalHttpCookie()`.
+pas déjà HTTPS. Le nom personnalisé doit **rester un sous-domaine du
+projet déclaré** : un domaine étranger tel que `evil.test` reste refusé.
+Les cookies HTTP locaux restent soumis aux règles existantes de
+`usesLocalHttpCookie()`.
 
 `AuthPageUrls` donne priorité aux origines BO/App explicites pour tous
 les liens d'activation, vérification et récupération de compte. Exemple :
