@@ -75,7 +75,8 @@ final readonly class AuthPageUrls
         }
         if ($parts['scheme'] === 'http'
             && ($this->environment !== 'dev'
-                || $parts['host'] !== $context.'.'.$this->domain())) {
+                || ($parts['host'] !== $context.'.'.$this->domain()
+                    && preg_match('/\\.(?:localhost|local|test)$/D', $parts['host']) !== 1))) {
             throw new \LogicException('Insecure authentication origin is forbidden.');
         }
         if ($parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '') !== $explicit) {
