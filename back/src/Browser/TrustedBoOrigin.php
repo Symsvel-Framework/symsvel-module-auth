@@ -33,7 +33,24 @@ final readonly class TrustedBoOrigin
         $override = $this->explicitOrigin
             ?? ($_SERVER['SYMSVEL_BO_ORIGIN'] ?? $_ENV['SYMSVEL_BO_ORIGIN'] ?? getenv('SYMSVEL_BO_ORIGIN') ?: null);
         if (is_string($override) && $override !== '') {
-            return $this->isBareOrigin($override, 'https') && hash_equals($override, $given);
+            if (!$this->isBareOrigin($override) || !hash_equals($override, $given)) {
+                return false;
+            }
+            $parts = parse_url($override);
+            if (!is_array($parts)) {
+                return false;
+            }
+            if ($parts['scheme'] === 'https') {
+                return true;
+            }
+            // The Setup URL mapping can use a nonstandard BO hostname in local
+            // development. Keep the existing loopback/reserved-host HTTP rule.
+            if ($parts['scheme'] !== 'http' || $this->environment !== 'dev' || $request->isSecure()) {
+                return false;
+            }
+            $reserved = preg_match('/\\.(?:localhost|local|test)$/D', $parts['host']) === 1;
+            $loopback = in_array($request->server->get('REMOTE_ADDR'), ['127.0.0.1', '::1'], true);
+            return $reserved || $loopback;
         }
 
         $domain = $this->runtimeDomain();
