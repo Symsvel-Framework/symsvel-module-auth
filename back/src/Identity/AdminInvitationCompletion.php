@@ -19,7 +19,7 @@ final readonly class AdminInvitationCompletion
 
     public function complete(string $rawToken, string $password, \DateTimeImmutable $now): bool
     {
-        if (strlen($password) < 12 || strlen($password) > 1024 || str_contains($password, "\0")) {
+        if (!NewPasswordPolicy::accepts($password)) {
             return false;
         }
 

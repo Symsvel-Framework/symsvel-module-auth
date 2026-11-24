@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use SymSvel\Module\Auth\Identity\AppInvitationCompletion;
+use SymSvel\Module\Auth\Identity\NewPasswordPolicy;
 
 /** Public one-time App activation, never usable as a BO login or password reset. */
 final readonly class AppInvitationCompleteController
@@ -32,8 +33,7 @@ final readonly class AppInvitationCompleteController
             || !is_string($payload['token'] ?? null)
             || !preg_match('/^[A-Za-z0-9_-]{43}$/D', $payload['token'])
             || !is_string($payload['password'] ?? null)
-            || strlen($payload['password']) < 12 || strlen($payload['password']) > 1024
-            || str_contains($payload['password'], "\0")) {
+            || !NewPasswordPolicy::accepts($payload['password'])) {
             return self::answer(['error' => ['code' => 'invalid_request']], 400);
         }
         $done = $this->completion->complete(

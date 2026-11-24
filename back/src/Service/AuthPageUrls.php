@@ -75,7 +75,9 @@ final readonly class AuthPageUrls
         }
         if ($parts['scheme'] === 'http'
             && ($this->environment !== 'dev'
-                || $parts['host'] !== $context.'.'.$this->domain())) {
+                || !str_ends_with($parts['host'], '.'.$this->domain()))) {
+            // An explicit local URL can use a custom subdomain (manager,
+            // administration, etc.), but never an unrelated domain.
             throw new \LogicException('Insecure authentication origin is forbidden.');
         }
         if ($parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '') !== $explicit) {

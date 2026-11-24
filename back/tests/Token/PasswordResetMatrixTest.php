@@ -93,18 +93,18 @@ final class PasswordResetMatrixTest extends TestCase
         $sessions->savePair($subject, (new TokenFactory())->issue('bo', null, $now), $now);
 
         $owner->allow = false;
-        self::assertFalse($completion->complete('bo', $token->raw, 'new-password-long-enough', $now));
+        self::assertFalse($completion->complete('bo', $token->raw, 'New-password-long-enough-1!', $now));
         self::assertSame($original, $db->fetchOne('SELECT password_hash FROM symsvel_auth_test_reset_accounts WHERE id = 71'));
         self::assertSame(0, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
         self::assertSame(0, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE revoked_at IS NOT NULL'));
 
         $owner->allow = true;
-        self::assertFalse($completion->complete('app', $token->raw, 'new-password-long-enough', $now));
-        self::assertTrue($completion->complete('bo', $token->raw, 'new-password-long-enough', $now));
-        self::assertTrue(password_verify('new-password-long-enough', (string) $db->fetchOne('SELECT password_hash FROM symsvel_auth_test_reset_accounts WHERE id = 71')));
+        self::assertFalse($completion->complete('app', $token->raw, 'New-password-long-enough-1!', $now));
+        self::assertTrue($completion->complete('bo', $token->raw, 'New-password-long-enough-1!', $now));
+        self::assertTrue(password_verify('New-password-long-enough-1!', (string) $db->fetchOne('SELECT password_hash FROM symsvel_auth_test_reset_accounts WHERE id = 71')));
         self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
         self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE revoked_at IS NOT NULL'));
         self::assertSame(1, (int) $db->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
-        self::assertFalse($completion->complete('bo', $token->raw, 'another-long-password', $now));
+        self::assertFalse($completion->complete('bo', $token->raw, 'Another-long-password-1!', $now));
     }
 }

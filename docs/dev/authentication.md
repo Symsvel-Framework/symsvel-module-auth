@@ -744,3 +744,31 @@ Le compilateur Tooling et les versions de migrations restent inchangés.
 vierge, sur MySQL, MariaDB, PostgreSQL et SQLite. Le CT d'origine a échoué,
 il ne constitue pas une validation des quatre moteurs.
 
+## Mapping des origines BO/App fourni par le Setup (22/11/2026)
+
+Le Setup du projet publie `SYMSVEL_BO_ORIGIN` et `SYMSVEL_APP_ORIGIN`
+dans `backend/.env.local` depuis les URL des scopes logiques du projet.
+Les URL réelles ne dépendent ni des noms de dossiers ni de la forme
+`bo.<domaine>` / `app.<domaine>`.
+
+`TrustedBoOrigin` valide strictement le navigateur BO par comparaison
+avec `SYMSVEL_BO_ORIGIN`. En production, seule une origine HTTPS exacte
+est acceptée. En environnement `dev`, une origine HTTP personnalisée
+peut être utilisée uniquement pour un nom de développement réservé
+(`.localhost`, `.local`, `.test`) ou sur loopback, si la requête n'est
+pas déjà HTTPS. Le nom personnalisé doit **rester un sous-domaine du
+projet déclaré** : un domaine étranger tel que `evil.test` reste refusé.
+Les cookies HTTP locaux restent soumis aux règles existantes de
+`usesLocalHttpCookie()`.
+
+`AuthPageUrls` donne priorité aux origines BO/App explicites pour tous
+les liens d'activation, vérification et récupération de compte. Exemple :
+avec App = `https://manager.choralys.com`, l'invitation est dirigée
+vers `https://manager.choralys.com/activate`, pas vers
+`https://app.choralys.com/activate`. L'HTTP de développement reste
+restreint aux origines locales prévues ; l'HTTP de production est refusé.
+
+Le fallback `SYMSVEL_BO_DOMAIN` demeure pour les projets installés
+avant le mapping. Les règles CORS générales sont définies par le Back
+et ne remplacent pas le contrôle d'origine du navigateur BO. Tests
+automatisés et CT Choralys (local puis VPS) requis avant validation.

@@ -39,6 +39,7 @@ jobs:
           done
           export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
           composer install --no-interaction --prefer-dist --no-progress
+          composer audit --locked
       - run: composer qa
 
   database-matrix:
@@ -110,6 +111,7 @@ jobs:
           done
           export COMPOSER_AUTH="$(php -r 'echo json_encode(["github-oauth" => ["github.com" => getenv("SYMSVEL_READ_TOKEN")]], JSON_THROW_ON_ERROR);')"
           composer install --no-interaction --prefer-dist --no-progress
+          composer audit --locked
       - name: Install PostgreSQL and MySQL clients
         run: |
           sudo apt-get update -qq

@@ -25,7 +25,7 @@ final readonly class PasswordResetCompletion
 
     public function complete(string $context, string $rawToken, string $newPassword, \DateTimeImmutable $now): bool
     {
-        if (!in_array($context, ['bo', 'app'], true) || strlen($newPassword) < 12 || strlen($newPassword) > 1024 || str_contains($newPassword, "\0")) {
+        if (!in_array($context, ['bo', 'app'], true) || !NewPasswordPolicy::accepts($newPassword)) {
             return false;
         }
 

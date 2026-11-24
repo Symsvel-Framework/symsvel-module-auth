@@ -26,6 +26,25 @@ final class TrustedBoOriginTest extends TestCase
         self::assertTrue($origin->accepts($request));
     }
 
+    public function testLocalMappedBoOriginWorksWithoutAssumingBoSubdomain(): void
+    {
+        $dev = new TrustedBoOrigin('dev', 'xt.localhost', 'http://administration.xt.localhost:5173');
+        $request = Request::create('http://backend.xt.localhost/apibo/auth/browser/login', 'POST');
+        $request->headers->set('Origin', 'http://administration.xt.localhost:5173');
+        self::assertTrue($dev->accepts($request));
+        self::assertTrue($dev->usesLocalHttpCookie($request));
+        $request->headers->set('Origin', 'http://bo.xt.localhost:5173');
+        self::assertFalse($dev->accepts($request));
+
+        $request->headers->set('Origin', 'http://administration.xt.localhost:5173');
+        self::assertFalse((new TrustedBoOrigin('prod', 'xt.localhost', 'http://administration.xt.localhost:5173'))->accepts($request));
+
+        $foreign = Request::create('http://backend.example.fr/apibo/auth/browser/login', 'POST');
+        $foreign->headers->set('Origin', 'http://administration.example.fr');
+        $foreign->server->set('REMOTE_ADDR', '198.51.100.3');
+        self::assertFalse((new TrustedBoOrigin('dev', 'example.fr', 'http://administration.example.fr'))->accepts($foreign));
+    }
+
     public function testRuntimeDomainWorksWithoutReadingOwnerOnlyWorkspaceMetadata(): void
     {
         // Same configuration is available from .env.local to PHP-FPM.

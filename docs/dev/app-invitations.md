@@ -13,8 +13,12 @@ Le jeton de 256 bits est hashé, limité à une heure, lié à l'empreinte
 de l'adresse enregistrée et consommé en transaction DBAL.
 En cas de rejet du compte, la consommation est annulée.
 
-Le lien d'invitation App est calculé par `AuthPageUrls` à partir du domaine
-publié par le Setup (`SYMSVEL_BO_DOMAIN`) et du chemin fixe `/activate`.
+Le lien d'invitation App est calculé par `AuthPageUrls` depuis l'origine
+explicite `SYMSVEL_APP_ORIGIN` fournie par le mapping des URL du Setup,
+suivie du chemin fixe `/activate`. Par exemple, le scope logique `app`
+peut correspondre à `https://manager.choralys.com`. Lorsque le mapping
+n'est pas configuré (anciens projets), `SYMSVEL_BO_DOMAIN` conserve son
+rôle de base de domaine historique et produit `app.<domaine>`.
 Aucune URL d'activation n'est éditable dans Settings ni dérivée du navigateur BO. Le template
 `auth.app.user_invitation` comporte les langues FR/EN. L'activation App
 envoie `POST /apiopen/auth/invitation/complete` avec le jeton et

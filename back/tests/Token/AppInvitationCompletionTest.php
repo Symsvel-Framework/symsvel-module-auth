@@ -42,12 +42,12 @@ final class AppInvitationCompletionTest extends TestCase
         $token = AppInvitationToken::issue($now);
         $tokens->save(7, 'user@example.test', $token, $now);
         $db->update('invited_users', ['email' => 'other@example.test'], ['id' => 7]);
-        self::assertFalse($completion->complete($token->raw, 'password-with-length', $now));
+        self::assertFalse($completion->complete($token->raw, 'Password-with-length-1!', $now));
         self::assertNull($db->fetchOne('SELECT used_at FROM symsvel_auth_app_invitations WHERE token_hash = ?', [$token->hash]) ?: null);
         $db->update('invited_users', ['email' => 'user@example.test'], ['id' => 7]);
-        self::assertTrue($completion->complete($token->raw, 'password-with-length', $now));
-        self::assertFalse($completion->complete($token->raw, 'password-with-length', $now));
-        self::assertTrue(password_verify('password-with-length', (string) $db->fetchOne('SELECT password_hash FROM invited_users WHERE id = 7')));
+        self::assertTrue($completion->complete($token->raw, 'Password-with-length-1!', $now));
+        self::assertFalse($completion->complete($token->raw, 'Password-with-length-1!', $now));
+        self::assertTrue(password_verify('Password-with-length-1!', (string) $db->fetchOne('SELECT password_hash FROM invited_users WHERE id = 7')));
         self::assertNotNull($db->fetchOne('SELECT verified_at FROM invited_users WHERE id = 7'));
     }
 }

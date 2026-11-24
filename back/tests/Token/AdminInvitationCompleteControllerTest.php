@@ -51,12 +51,12 @@ final class AdminInvitationCompleteControllerTest extends TestCase
         $token = AdminInvitationToken::issue($now);
         $store->save(7, 'new@example.test', $token, $now);
         $controller = new AdminInvitationCompleteController(new AdminInvitationCompletion($db, $store, new AdminInvitationOwners([$owner])));
-        $body = json_encode(['token' => $token->raw, 'password' => 'strong-new-password'], JSON_THROW_ON_ERROR);
+        $body = json_encode(['token' => $token->raw, 'password' => 'Strong-new-password-1!'], JSON_THROW_ON_ERROR);
         $request = Request::create('/apibo/auth/invitation/complete', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $body);
         $response = $controller->bo($request);
         self::assertSame(200, $response->getStatusCode());
         self::assertTrue($response->headers->hasCacheControlDirective('no-store'));
-        self::assertTrue(password_verify('strong-new-password', (string) $db->fetchOne('SELECT password_hash FROM invited WHERE id = 7')));
+        self::assertTrue(password_verify('Strong-new-password-1!', (string) $db->fetchOne('SELECT password_hash FROM invited WHERE id = 7')));
         self::assertSame(400, $controller->bo($request)->getStatusCode());
         self::assertSame(415, $controller->bo(Request::create('/apibo/auth/invitation/complete', 'POST'))->getStatusCode());
         self::assertSame(400, $controller->bo(Request::create('/apibo/auth/invitation/complete', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], '{"token":false}'))->getStatusCode());

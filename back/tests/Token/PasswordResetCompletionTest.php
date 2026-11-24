@@ -29,13 +29,13 @@ final class PasswordResetCompletionTest extends TestCase
         $resets->save($subject, $token, $now);
         $pair = (new TokenFactory())->issue('bo', null, $now);
         $sessions->savePair($subject, $pair, $now);
-        self::assertTrue($completion->complete('bo', $token->raw, 'long-enough-password', $now));
-        self::assertTrue(password_verify('long-enough-password', (string) $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5')));
+        self::assertTrue($completion->complete('bo', $token->raw, 'Long-enough-password-1!', $now));
+        self::assertTrue(password_verify('Long-enough-password-1!', (string) $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5')));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_access_tokens WHERE revoked_at IS NOT NULL'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_refresh_tokens WHERE revoked_at IS NOT NULL'));
-        self::assertFalse($completion->complete('bo', $token->raw, 'another-long-password', $now));
-        self::assertFalse($completion->complete('app', $token->raw, 'another-long-password', $now));
+        self::assertFalse($completion->complete('bo', $token->raw, 'Another-long-password-1!', $now));
+        self::assertFalse($completion->complete('app', $token->raw, 'Another-long-password-1!', $now));
     }
 
     public function testFailedPasswordUpdateRollsBackConsumption(): void
@@ -46,11 +46,11 @@ final class PasswordResetCompletionTest extends TestCase
         $resets->save(new TokenSubject('bo', 5), $token, $now);
         $originalHash = (string) $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5');
         $provider->allow = false;
-        self::assertFalse($completion->complete('bo', $token->raw, 'long-enough-password', $now));
+        self::assertFalse($completion->complete('bo', $token->raw, 'Long-enough-password-1!', $now));
         self::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
         self::assertSame($originalHash, $connection->fetchOne('SELECT password_hash FROM test_reset_accounts WHERE id = 5'));
         $provider->allow = true;
-        self::assertTrue($completion->complete('bo', $token->raw, 'long-enough-password', $now));
+        self::assertTrue($completion->complete('bo', $token->raw, 'Long-enough-password-1!', $now));
     }
 
     private function fixture(): array
