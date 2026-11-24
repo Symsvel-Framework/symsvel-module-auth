@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use SymSvel\Module\Auth\Identity\AdminInvitationCompletion;
+use SymSvel\Module\Auth\Identity\NewPasswordPolicy;
 
 final readonly class AdminInvitationCompleteController
 {
@@ -31,8 +32,7 @@ final readonly class AdminInvitationCompleteController
         if (!is_array($data) || !is_string($data['token'] ?? null)
             || !preg_match('/^[A-Za-z0-9_-]{43}$/D', $data['token'])
             || !is_string($data['password'] ?? null)
-            || strlen($data['password']) < 12 || strlen($data['password']) > 1024
-            || str_contains($data['password'], "\0")) {
+            || !NewPasswordPolicy::accepts($data['password'])) {
             return self::response(['error' => ['code' => 'invalid_request', 'message' => 'Invalid request.']], 400);
         }
 

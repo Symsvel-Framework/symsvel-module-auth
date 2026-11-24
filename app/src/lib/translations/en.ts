@@ -32,9 +32,9 @@ export default {
   "resetButton": "Save new password",
   "resetSuccess": "Your password was changed. Please sign in again.",
   "resetMismatch": "Passwords do not match.",
-  "resetInvalidPassword": "Choose a password of 12 to 1024 UTF-8 bytes without NUL.",
-  "resetPasswordRule": "12 to 1024 UTF-8 bytes, no NUL character.",
-  "passwordStrength": "Password diversity",
+  "resetInvalidPassword": "Meet the new password requirements.",
+  "resetPasswordRule": "At least 12 characters, uppercase, lowercase, digit and special character.",
+  "passwordStrength": "Password strength (estimate)",
   "strengthHint": "A long passphrase with varied characters is recommended.",
   "resetInvalidToken": "This link is invalid, expired or has already been used.",
   "strengthLevels": {

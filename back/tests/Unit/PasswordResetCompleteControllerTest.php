@@ -42,7 +42,7 @@ final class PasswordResetCompleteControllerTest extends TestCase
 
         $unknown = Request::create('/apibo/auth/password-reset/complete', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
             'token' => str_repeat('A', 43),
-            'password' => 'long-enough-password',
+            'password' => 'Long-enough-password-1!',
         ], JSON_THROW_ON_ERROR));
         $response = $controller->bo($unknown);
         self::assertSame(400, $response->getStatusCode());
@@ -78,12 +78,12 @@ final class PasswordResetCompleteControllerTest extends TestCase
         ));
         $request = Request::create('/apibo/auth/password-reset/complete', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode([
             'token' => $token->raw,
-            'password' => 'new-long-password',
+            'password' => 'New-long-password-1!',
         ], JSON_THROW_ON_ERROR));
         $response = $controller->bo($request);
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('completed', json_decode((string) $response->getContent(), true)['status']);
-        self::assertTrue(password_verify('new-long-password', (string) $owner->hash));
+        self::assertTrue(password_verify('New-long-password-1!', (string) $owner->hash));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symsvel_auth_password_reset_tokens WHERE used_at IS NOT NULL'));
         self::assertSame(400, $controller->bo($request)->getStatusCode());
     }

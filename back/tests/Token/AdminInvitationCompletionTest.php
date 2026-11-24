@@ -25,15 +25,15 @@ final class AdminInvitationCompletionTest extends TestCase
         $tokens->save(7, 'admin@example.test', $first, $now);
 
         $db->executeStatement("UPDATE test_invited_admins SET email = 'changed@example.test' WHERE id = 7");
-        self::assertFalse($completion->complete($first->raw, 'new-long-password', $now));
+        self::assertFalse($completion->complete($first->raw, 'New-long-password-1!', $now));
         self::assertNull($db->fetchOne('SELECT used_at FROM symsvel_auth_admin_invitations WHERE token_hash = ?', [$first->hash]) ?: null);
         self::assertNull($db->fetchOne('SELECT verified_at FROM test_invited_admins WHERE id = 7') ?: null);
 
         $db->executeStatement("UPDATE test_invited_admins SET email = 'admin@example.test' WHERE id = 7");
-        self::assertTrue($completion->complete($first->raw, 'new-long-password', $now));
-        self::assertTrue(password_verify('new-long-password', (string) $db->fetchOne('SELECT password_hash FROM test_invited_admins WHERE id = 7')));
+        self::assertTrue($completion->complete($first->raw, 'New-long-password-1!', $now));
+        self::assertTrue(password_verify('New-long-password-1!', (string) $db->fetchOne('SELECT password_hash FROM test_invited_admins WHERE id = 7')));
         self::assertNotFalse($db->fetchOne('SELECT verified_at FROM test_invited_admins WHERE id = 7'));
-        self::assertFalse($completion->complete($first->raw, 'another-password', $now));
+        self::assertFalse($completion->complete($first->raw, 'Another-password-1!', $now));
     }
 
     public function testDisabledAccountRollsBackAndPasswordIsUnchanged(): void
@@ -43,7 +43,7 @@ final class AdminInvitationCompletionTest extends TestCase
         $token = AdminInvitationToken::issue($now);
         $tokens->save(7, 'admin@example.test', $token, $now);
         $db->executeStatement('UPDATE test_invited_admins SET enabled = 0 WHERE id = 7');
-        self::assertFalse($completion->complete($token->raw, 'new-long-password', $now));
+        self::assertFalse($completion->complete($token->raw, 'New-long-password-1!', $now));
         self::assertSame('pending-invitation', $db->fetchOne('SELECT password_hash FROM test_invited_admins WHERE id = 7'));
         self::assertNull($db->fetchOne('SELECT used_at FROM symsvel_auth_admin_invitations WHERE token_hash = ?', [$token->hash]) ?: null);
     }

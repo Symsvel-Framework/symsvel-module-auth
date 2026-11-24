@@ -16,8 +16,9 @@ describe('auth module', () => {
     expect(validInvitationToken(null)).toBe(false);
     expect(validInvitationToken('A'.repeat(42) + '?')).toBe(false);
   });
-  it('enforces backend-compatible password byte limits', () => {
-    expect(validInvitationPassword('a'.repeat(12))).toBe(true);
+  it('enforces the new-password policy', () => {
+    expect(validInvitationPassword('Abcdefghij1!')).toBe(true);
+    expect(validInvitationPassword('a'.repeat(12))).toBe(false);
     expect(validInvitationPassword('short')).toBe(false);
     expect(validInvitationPassword('a'.repeat(1025))).toBe(false);
     expect(validInvitationPassword('long-password\0no')).toBe(false);

@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use SymSvel\Module\Auth\Identity\PasswordResetCompletion;
+use SymSvel\Module\Auth\Identity\NewPasswordPolicy;
 
 /** Public completion routes; no account information is disclosed. */
 final readonly class PasswordResetCompleteController
@@ -37,7 +38,7 @@ final readonly class PasswordResetCompleteController
         if (!is_array($payload) || !is_string($payload['token'] ?? null)
             || !is_string($payload['password'] ?? null)
             || !preg_match('/^[A-Za-z0-9_-]{43}$/D', $payload['token'])
-            || strlen($payload['password']) < 12 || strlen($payload['password']) > 1024) {
+            || !NewPasswordPolicy::accepts($payload['password'])) {
             return $this->response(['error' => ['code' => 'invalid_request', 'message' => 'Invalid request.']], 400);
         }
 

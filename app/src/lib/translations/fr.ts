@@ -32,9 +32,9 @@ export default {
   "resetButton": "Enregistrer le nouveau mot de passe",
   "resetSuccess": "Votre mot de passe a été modifié. Reconnectez-vous.",
   "resetMismatch": "Les deux mots de passe ne correspondent pas.",
-  "resetInvalidPassword": "Choisissez un mot de passe de 12 à 1024 octets UTF-8, sans caractère nul.",
-  "resetPasswordRule": "12 à 1024 octets UTF-8, sans caractère nul.",
-  "passwordStrength": "Diversité du mot de passe",
+  "resetInvalidPassword": "Respectez les critères du nouveau mot de passe.",
+  "resetPasswordRule": "12 caractères minimum, majuscule, minuscule, chiffre et caractère spécial.",
+  "passwordStrength": "Force du mot de passe (indicative)",
   "strengthHint": "Une phrase longue et des caractères variés sont recommandés.",
   "resetInvalidToken": "Le lien est invalide, expiré ou déjà utilisé.",
   "strengthLevels": {
