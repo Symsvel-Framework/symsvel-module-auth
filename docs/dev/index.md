@@ -94,3 +94,7 @@ Les libellés du tableau de bord générique (`dashboard`, `loggedIn`) ont été
 Les actions de session du shell (`logout`, `checking`) sont propriété du module Auth malgré leur affichage dans la navigation native BO. Les clés `bo.auth.session.*` figurent dans les dictionnaires BO et sont consommées par le shell. Les dictionnaires natifs `system` ne doivent pas absorber de textes fonctionnels Auth.
 
 Les assertions de dictionnaires vérifient explicitement les libellés du shell attribués à ce module, en plus de l'alignement des clés FR/EN. Le shell reste un consommateur des traductions et conserve ses fallbacks natifs.
+
+## Branding et sécurité
+
+Les écrans du module lisent le nom public avec `getProjectBrand()` du composant hôte BO/App et affichent `$brandName`. Le layout effectue la requête ; le module ne crée ni état de branding ni requête indépendante. Le nom de repli est géré par l'hôte. L'intégration au composant hôte est vérifiée par la QA ; le CT doit vérifier les en-têtes et titres avec un nom de projet personnalisé. La QA PHP exécute également `composer audit --locked` après installation, sans exclusion d'avis.
