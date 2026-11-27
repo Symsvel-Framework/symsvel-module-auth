@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use SymSvel\Module\Auth\Token\TokenFactory;
 use SymSvel\Module\Auth\Token\TokenIssuer;
 use SymSvel\Module\Auth\Token\TokenSubject;
+use SymSvel\Module\Auth\Token\SessionIssuedListener;
 
 final class TokenIssuerTest extends TestCase
 {
@@ -54,4 +55,38 @@ final class TokenIssuerTest extends TestCase
         self::assertSame(['save'], $store->operations);
     }
 
+    public function testListenerRunsAfterPersistenceOnlyForSuccessfulInitialIssuance(): void
+    {
+        $store = new InMemoryTokenStore();
+        $listener = new class($store) implements SessionIssuedListener {
+            public array $calls = [];
+            public function __construct(private InMemoryTokenStore $store) {}
+            public function onSessionIssued(TokenSubject $subject, \DateTimeImmutable $at): void
+            {
+                $this->calls[] = [$subject, $at, $this->store->transactions, $this->store->operations];
+            }
+        };
+        $issuer = new TokenIssuer($store, new TokenFactory(), [$listener]);
+        $subject = new TokenSubject('app', 9);
+        $now = new \DateTimeImmutable('2026-11-27T13:00:00Z');
+        self::assertNull($issuer->issueWhen($subject, $now, static fn (): bool => false));
+        self::assertSame([], $listener->calls);
+        $issuer->issue($subject, $now);
+        self::assertSame([[$subject, $now, 2, ['save']]], $listener->calls);
+        $issuer->issueWhen($subject, $now, static fn (): bool => true);
+        self::assertSame([$subject, $now, 3, ['save', 'save']], $listener->calls[1]);
+    }
+
+    public function testListenerFailureIsNotReportedAsSuccessfulIssuance(): void
+    {
+        $listener = new class implements SessionIssuedListener {
+            public function onSessionIssued(TokenSubject $subject, \DateTimeImmutable $at): void
+            {
+                throw new \RuntimeException('Transactional listener failed.');
+            }
+        };
+        $this->expectException(\RuntimeException::class);
+        (new TokenIssuer(new InMemoryTokenStore(), new TokenFactory(), [$listener]))
+            ->issue(new TokenSubject('app', 9), new \DateTimeImmutable());
+    }
 }

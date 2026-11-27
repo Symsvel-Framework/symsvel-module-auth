@@ -12,10 +12,34 @@ namespace SymSvel\Module\Auth\Token;
  */
 final readonly class TokenIssuer
 {
+    /** @var list<SessionIssuedListener> */
+    private array $listeners;
+
+    /** @param iterable<SessionIssuedListener> $listeners */
     public function __construct(
         private TokenStore $store,
         private TokenFactory $factory,
+        iterable $listeners = [],
     ) {
+        $registered = [];
+        foreach ($listeners as $listener) {
+            if (!$listener instanceof SessionIssuedListener) {
+                throw new \LogicException('Invalid session-issued listener.');
+            }
+            $registered[] = $listener;
+        }
+        $this->listeners = $registered;
+    }
+
+    private function persist(TokenSubject $subject, \DateTimeImmutable $now): TokenPair
+    {
+        $pair = $this->factory->issue($subject->context, null, $now);
+        $this->store->savePair($subject, $pair, $now);
+        foreach ($this->listeners as $listener) {
+            $listener->onSessionIssued($subject, $now);
+        }
+
+        return $pair;
     }
 
     /**
@@ -31,19 +55,14 @@ final readonly class TokenIssuer
             if ($verifiedGuard() !== true) {
                 return null;
             }
-            $pair = $this->factory->issue($subject->context, null, $now);
-            $this->store->savePair($subject, $pair, $now);
-            return $pair;
+            return $this->persist($subject, $now);
         });
     }
 
     public function issue(TokenSubject $subject, \DateTimeImmutable $now): TokenPair
     {
         return $this->store->transaction(function () use ($subject, $now): TokenPair {
-            $pair = $this->factory->issue($subject->context, null, $now);
-            $this->store->savePair($subject, $pair, $now);
-
-            return $pair;
+            return $this->persist($subject, $now);
         });
     }
 }
