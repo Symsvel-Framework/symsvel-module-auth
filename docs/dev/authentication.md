@@ -772,3 +772,7 @@ Le fallback `SYMSVEL_BO_DOMAIN` demeure pour les projets installés
 avant le mapping. Les règles CORS générales sont définies par le Back
 et ne remplacent pas le contrôle d'origine du navigateur BO. Tests
 automatisés et CT Choralys (local puis VPS) requis avant validation.
+
+## Notification transactionnelle d'une nouvelle session (27/11/2026)
+
+Le contrat `Token/SessionIssuedListener`, tag Symfony `symsvel.auth.session_issued_listener`, permet au module propriétaire d'enregistrer la dernière connexion après émission initiale d'une famille. `TokenIssuer::issue()` et `issueWhen()` le déclenchent après persistance des tokens et dans la transaction existante. Une vérification de second facteur refusée ne déclenche rien ; la rotation des refresh tokens ne passe pas par TokenIssuer et ne notifie pas. Le sujet comporte le contexte et l'identifiant, jamais les secrets des tokens. L'extension est facultative et indépendante de Users. Le listener filtre son contexte et ne peut effectuer que des écritures transactionnelles sur la connexion DBAL partagée (aucune requête externe, aucun mail, aucune transaction indépendante). Une exception annule la transaction réelle et interdit la remise d'une session réussie. Les modules d'authentification externes doivent passer par TokenIssuer après authentification. Tests unitaires des appels et des refus ; test de rollback DBAL et CT multi-SGBD à valider avant exploitation destructive de l'information. Aucun traitement GDPR dans Auth.

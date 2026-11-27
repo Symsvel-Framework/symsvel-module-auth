@@ -179,6 +179,8 @@ final class AuthBundle extends AbstractBundle
         }
         $builder->getDefinition(ProfileEmailChangeCompletion::class)
             ->setArgument('$db', new Reference('doctrine.dbal.default_connection'));
+        $builder->getDefinition(TokenIssuer::class)
+            ->setArgument(2, new TaggedIteratorArgument('symsvel.auth.session_issued_listener'));
         $builder->getDefinition(PasswordLogin::class)
             ->setArgument('$secondFactors', new TaggedIteratorArgument('symsvel.auth.second_factor'));
     }
