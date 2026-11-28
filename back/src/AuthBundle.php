@@ -149,6 +149,10 @@ final class AuthBundle extends AbstractBundle
             ->setArgument('$connection', new Reference('doctrine.dbal.default_connection'));
         $builder->setAlias(PasswordPrincipal::class, ContextIdentityProvider::class);
         $builder->setAlias(PrincipalStatus::class, ContextIdentityProvider::class);
+        $builder->setAlias(TransactionalPrincipalStatus::class, ContextIdentityProvider::class);
+        $builder->register(AppPrincipalSecurityData::class)
+            ->setArgument(0, new Reference('doctrine.dbal.default_connection'))
+            ->setArgument(1, new TaggedIteratorArgument('symsvel.auth.app_principal_security_contributor'));
 
         $builder->register(TrustedBoOrigin::class, TrustedBoOrigin::class)->setAutowired(true);
 

@@ -97,6 +97,10 @@ final class AuthBundleServicesTest extends TestCase
 
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PasswordPrincipal::class));
         self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(PrincipalStatus::class));
+        self::assertSame(ContextIdentityProvider::class, (string) $builder->getAlias(\SymSvel\Module\Auth\Identity\TransactionalPrincipalStatus::class));
+        $security = $builder->getDefinition(\SymSvel\Module\Auth\Token\AppPrincipalSecurityData::class);
+        self::assertSame('doctrine.dbal.default_connection', (string) $security->getArgument(0));
+        self::assertSame('symsvel.auth.app_principal_security_contributor', $security->getArgument(1)->getTag());
         self::assertTrue($builder->getDefinition(ContextIdentityProvider::class)->isAutowired());
         $providers = $builder->getDefinition(ContextIdentityProvider::class)->getArgument('$providers');
         self::assertInstanceOf(TaggedIteratorArgument::class, $providers);

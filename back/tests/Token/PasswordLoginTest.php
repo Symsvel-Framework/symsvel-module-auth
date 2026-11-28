@@ -50,6 +50,30 @@ final class PasswordLoginTest extends TestCase
         self::assertSame(1, $store->transactions);
         self::assertSame(['save'], $store->operations);
     }
+    public function testAppIssuanceRechecksTheOwnerGuardInsideTheTokenTransaction(): void
+    {
+        $store = new InMemoryTokenStore();
+        $principal = new class($store) implements PasswordPrincipal, \SymSvel\Module\Auth\Identity\TransactionalPrincipalStatus {
+            public bool $active = false;
+            public function __construct(private InMemoryTokenStore $store) {}
+            public function authenticate(string $context, string $identifier, string $password): ?TokenSubject
+            { return new TokenSubject('app', 8); }
+            public function isActive(TokenSubject $subject): bool { return $this->active; }
+            public function lockActive(TokenSubject $subject): bool
+            {
+                if ($this->store->transactions < 1) throw new \LogicException('Guard outside transaction.');
+                return $this->active;
+            }
+        };
+        $login = new PasswordLogin($principal, new TokenIssuer($store, new TokenFactory()));
+        $now = new \DateTimeImmutable('2026-11-28T12:00:00Z');
+        self::assertNull($login->login('app', 'person@example.test', 'password', $now));
+        self::assertSame([], $store->operations);
+        $principal->active = true;
+        self::assertNotNull($login->login('app', 'person@example.test', 'password', $now));
+        self::assertSame(['save'], $store->operations);
+    }
+
     public function testOptionalSecondFactorBlocksSessionUntilVerified(): void
     {
         $principal = new class implements PasswordPrincipal {

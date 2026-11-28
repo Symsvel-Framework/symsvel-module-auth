@@ -11,7 +11,7 @@ use SymSvel\Module\Auth\Token\TokenSubject;
  * Selects an identity owner by context, without a hard dependency on Users.
  * Each tagged provider must implement both identity contracts.
  */
-final class ContextIdentityProvider implements PasswordPrincipal, PrincipalStatus
+final class ContextIdentityProvider implements PasswordPrincipal, TransactionalPrincipalStatus
 {
     /** @var array<string, PasswordPrincipal&PrincipalStatus> */
     private array $providers = [];
@@ -47,6 +47,16 @@ final class ContextIdentityProvider implements PasswordPrincipal, PrincipalStatu
     {
         $provider = $this->providers[$subject->context] ?? null;
 
+        return $provider?->isActive($subject) ?? false;
+    }
+    public function lockActive(TokenSubject $subject): bool
+    {
+        $provider = $this->providers[$subject->context] ?? null;
+        if ($provider instanceof TransactionalPrincipalStatus) {
+            return $provider->lockActive($subject);
+        }
+        // Legacy identity owners keep their status contract; native Users
+        // provides the stronger lock for concurrent account retention.
         return $provider?->isActive($subject) ?? false;
     }
 }

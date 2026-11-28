@@ -70,6 +70,9 @@ final readonly class PasswordLogin
             throw new \LogicException('BO requires a registered second-factor provider that issues a challenge.');
         }
 
+        if ($this->principals instanceof TransactionalPrincipalStatus) {
+            return $this->tokens->issueWhen($subject, $now, fn (): bool => $this->principals->lockActive($subject));
+        }
         return $this->tokens->issue($subject, $now);
     }
 }
